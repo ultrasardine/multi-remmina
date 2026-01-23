@@ -39,13 +39,17 @@
 #include <glib.h>
 #include <glib/gi18n-lib.h>
 #include <glib/gstdio.h>
+#ifdef __APPLE__
+#include "remmina_keychain_macos.h"
+#else
 #include <libsecret/secret.h>
+#endif
 #include <remmina/plugin.h>
 
 static RemminaPluginService *remmina_plugin_service = NULL;
 #define REMMINA_PLUGIN_DEBUG(fmt, ...) remmina_plugin_service->_remmina_debug(__func__, fmt, ##__VA_ARGS__)
 
-
+#ifndef __APPLE__
 static SecretSchema remmina_file_secret_schema =
 { "org.remmina.Password", SECRET_SCHEMA_NONE,
   {
@@ -59,10 +63,14 @@ static SecretSchema remmina_file_secret_schema =
 static SecretService* secretservice;
 static SecretCollection* defaultcollection;
 #endif
+#endif /* __APPLE__ */
 
 
 static gboolean remmina_plugin_glibsecret_is_service_available(RemminaSecretPlugin* plugin)
 {
+#ifdef __APPLE__
+	return TRUE;
+#else
 #ifdef LIBSECRET_VERSION_0_18
 	if (secretservice && defaultcollection)
 		return TRUE;
@@ -71,12 +79,17 @@ static gboolean remmina_plugin_glibsecret_is_service_available(RemminaSecretPlug
 #else
 	return FALSE;
 #endif
+#endif /* __APPLE__ */
 }
 
 static void remmina_plugin_glibsecret_unlock_secret_service(RemminaSecretPlugin* plugin)
 {
 	TRACE_CALL(__func__);
 
+#ifdef __APPLE__
+	/* No unlock needed for macOS Keychain */
+	return;
+#else
 #ifdef LIBSECRET_VERSION_0_18
 
 	GError *error = NULL;
@@ -94,6 +107,7 @@ static void remmina_plugin_glibsecret_unlock_secret_service(RemminaSecretPlugin*
 		}
 	}
 #endif
+#endif /* __APPLE__ */
 	return;
 }
 
@@ -105,16 +119,31 @@ static void remmina_plugin_glibsecret_store_password(RemminaSecretPlugin* plugin
 	gchar *s;
 
 	path = remmina_plugin_service->file_get_path(remminafile);
+	
+#ifdef __APPLE__
+	/* Use macOS Keychain */
+	s = g_strdup_printf("%s-%s", path, key);
+	if (remmina_keychain_macos_store_password("Remmina", s, password, &r)) {
+		REMMINA_PLUGIN_DEBUG("Password \"%s\" saved for file %s\n", key, path);
+	} else {
+		REMMINA_PLUGIN_DEBUG("Password \"%s\" cannot be saved for file %s: %s\n", key, path, r ? r->message : "Unknown error");
+		if (r)
+			g_error_free(r);
+	}
+	g_free(s);
+#else
+	/* Use libsecret on Linux */
 	s = g_strdup_printf("Remmina: %s - %s", remmina_plugin_service->file_get_string(remminafile, "name"), key);
 	secret_password_store_sync(&remmina_file_secret_schema, SECRET_COLLECTION_DEFAULT, s, password,
 		NULL, &r, "filename", path, "key", key, NULL);
 	g_free(s);
 	if (r == NULL) {
-		REMMINA_PLUGIN_DEBUG("Password “%s” saved for file %s\n", key, path);
+		REMMINA_PLUGIN_DEBUG("Password \"%s\" saved for file %s\n", key, path);
 	}else  {
-		REMMINA_PLUGIN_DEBUG("Password “%s” cannot be saved for file %s\n", key, path);
+		REMMINA_PLUGIN_DEBUG("Password \"%s\" cannot be saved for file %s\n", key, path);
 		g_error_free(r);
 	}
+#endif /* __APPLE__ */
 }
 
 static gchar*
@@ -125,8 +154,25 @@ remmina_plugin_glibsecret_get_password(RemminaSecretPlugin* plugin, RemminaFile 
 	const gchar *path;
 	gchar *password;
 	gchar *p;
+	gchar *s;
 
 	path = remmina_plugin_service->file_get_path(remminafile);
+	
+#ifdef __APPLE__
+	/* Use macOS Keychain */
+	s = g_strdup_printf("%s-%s", path, key);
+	password = remmina_keychain_macos_get_password("Remmina", s, &r);
+	g_free(s);
+	if (password) {
+		return password;
+	} else {
+		REMMINA_PLUGIN_DEBUG("Password cannot be found for file %s\n", path);
+		if (r)
+			g_error_free(r);
+		return NULL;
+	}
+#else
+	/* Use libsecret on Linux */
 	password = secret_password_lookup_sync(&remmina_file_secret_schema, NULL, &r, "filename", path, "key", key, NULL);
 	if (r == NULL) {
 		p = g_strdup(password);
@@ -136,6 +182,7 @@ remmina_plugin_glibsecret_get_password(RemminaSecretPlugin* plugin, RemminaFile 
 		REMMINA_PLUGIN_DEBUG("Password cannot be found for file %s\n", path);
 		return NULL;
 	}
+#endif /* __APPLE__ */
 }
 
 static void remmina_plugin_glibsecret_delete_password(RemminaSecretPlugin* plugin, RemminaFile *remminafile, const gchar *key)
@@ -143,17 +190,37 @@ static void remmina_plugin_glibsecret_delete_password(RemminaSecretPlugin* plugi
 	TRACE_CALL(__func__);
 	GError *r = NULL;
 	const gchar *path;
+	gchar *s;
 
 	path = remmina_plugin_service->file_get_path(remminafile);
+	
+#ifdef __APPLE__
+	/* Use macOS Keychain */
+	s = g_strdup_printf("%s-%s", path, key);
+	if (remmina_keychain_macos_delete_password("Remmina", s, &r)) {
+		REMMINA_PLUGIN_DEBUG("password \"%s\" deleted for file %s", key, path);
+	} else {
+		REMMINA_PLUGIN_DEBUG("password \"%s\" cannot be deleted for file %s", key, path);
+		if (r)
+			g_error_free(r);
+	}
+	g_free(s);
+#else
+	/* Use libsecret on Linux */
 	secret_password_clear_sync(&remmina_file_secret_schema, NULL, &r, "filename", path, "key", key, NULL);
 	if (r == NULL)
-		REMMINA_PLUGIN_DEBUG("password “%s” deleted for file %s", key, path);
+		REMMINA_PLUGIN_DEBUG("password \"%s\" deleted for file %s", key, path);
 	else
-		REMMINA_PLUGIN_DEBUG("password “%s” cannot be deleted for file %s", key, path);
+		REMMINA_PLUGIN_DEBUG("password \"%s\" cannot be deleted for file %s", key, path);
+#endif /* __APPLE__ */
 }
 
 static gboolean remmina_plugin_glibsecret_init(RemminaSecretPlugin* plugin)
 {
+#ifdef __APPLE__
+	/* Use macOS Keychain */
+	return remmina_keychain_macos_init();
+#else
 #ifdef LIBSECRET_VERSION_0_18
 	GError *error;
 	error = NULL;
@@ -180,6 +247,7 @@ static gboolean remmina_plugin_glibsecret_init(RemminaSecretPlugin* plugin)
 	g_print("Libsecret was too old during compilation, disabling secret service.\n");
 	return FALSE;
 #endif
+#endif /* __APPLE__ */
 }
 
 static RemminaSecretPlugin remmina_plugin_glibsecret =
@@ -216,4 +284,3 @@ remmina_plugin_entry(RemminaPluginService *service)
 	return TRUE;
 
 }
-

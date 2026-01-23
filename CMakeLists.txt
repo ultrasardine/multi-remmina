@@ -297,6 +297,82 @@ if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
   set(CMAKE_SHARED_LIBRARY_PREFIX ${CMAKE_SHARED_LIBRARY_PREFIX} /usr/local/lib)
 endif()
 
+# macOS
+
+if(APPLE)
+  message(STATUS "Configuring for macOS (Darwin)")
+  
+  # Set macOS-specific RPATH for application bundle
+  set(CMAKE_MACOSX_RPATH ON)
+  set(CMAKE_INSTALL_RPATH "@executable_path/../Frameworks;@executable_path/../lib")
+  
+  # Add Homebrew search paths
+  # Support both Intel (/usr/local) and Apple Silicon (/opt/homebrew) installations
+  list(APPEND CMAKE_PREFIX_PATH
+    /usr/local
+    /opt/homebrew
+    /usr/local/opt/openssl
+    /opt/homebrew/opt/openssl
+  )
+  
+  # Add Homebrew include and library paths
+  include_directories(SYSTEM
+    /usr/local/include
+    /opt/homebrew/include
+    /usr/local/opt/openssl/include
+    /opt/homebrew/opt/openssl/include
+  )
+  
+  link_directories(
+    /usr/local/lib
+    /opt/homebrew/lib
+    /usr/local/opt/openssl/lib
+    /opt/homebrew/opt/openssl/lib
+  )
+  
+  # Disable Linux-specific features on macOS
+  set(WITH_AVAHI OFF CACHE BOOL "Disable Avahi on macOS" FORCE)
+  set(WITH_APPINDICATOR OFF CACHE BOOL "Disable AppIndicator on macOS" FORCE)
+  set(WITH_TELEPATHY OFF CACHE BOOL "Disable Telepathy on macOS" FORCE)
+  set(HAVE_LIBAPPINDICATOR OFF CACHE BOOL "Disable AppIndicator on macOS" FORCE)
+  
+  # Enable macOS-specific features
+  option(WITH_MACOS_KEYCHAIN "Enable macOS Keychain support" ON)
+  
+  if(WITH_MACOS_KEYCHAIN)
+    message(STATUS "macOS Keychain support enabled")
+    # Find and link macOS Security framework
+    find_library(SECURITY_FRAMEWORK Security REQUIRED)
+    if(SECURITY_FRAMEWORK)
+      message(STATUS "Security framework found: ${SECURITY_FRAMEWORK}")
+      add_definitions(-DWITH_MACOS_KEYCHAIN)
+    else()
+      message(FATAL_ERROR "Security framework not found - required for macOS Keychain support")
+    endif()
+  endif()
+  
+  # Find and link Cocoa framework (needed for bundle support)
+  find_library(COCOA_FRAMEWORK Cocoa REQUIRED)
+  if(COCOA_FRAMEWORK)
+    message(STATUS "Cocoa framework found: ${COCOA_FRAMEWORK}")
+  else()
+    message(FATAL_ERROR "Cocoa framework not found - required for macOS bundle support")
+  endif()
+  
+  # Note: Resources (icons, themes, UI files) are installed to standard Unix paths
+  # during 'make install'. The bundle creation script (scripts/create-macos-bundle.sh)
+  # will copy these resources from the install prefix to the .app bundle's Resources
+  # directory. Icon cache generation and desktop database updates are disabled on
+  # macOS as they are not applicable to app bundles.
+  
+  message(STATUS "macOS configuration complete:")
+  message(STATUS "  - Avahi: OFF (Linux-specific)")
+  message(STATUS "  - AppIndicator: OFF (Linux-specific)")
+  message(STATUS "  - Telepathy: OFF (Linux-specific)")
+  message(STATUS "  - Keychain: ${WITH_MACOS_KEYCHAIN}")
+  message(STATUS "  - RPATH: ${CMAKE_INSTALL_RPATH}")
+endif()
+
 # Versioning
 set(WITH_LIBRARY_VERSIONING "ON")
 
@@ -535,6 +611,23 @@ else()
   message(STATUS "Man pages disabled")
 endif()
 
+option(WITH_TESTS "Build with unit tests" OFF)
+if(WITH_TESTS)
+  message(STATUS "Enabling unit tests")
+  enable_testing()
+  add_subdirectory(tests/cmake)
+  add_subdirectory(tests/plugin_loading)
+  if(APPLE)
+    add_subdirectory(tests/keychain)
+    add_subdirectory(tests/service_discovery)
+    add_subdirectory(tests/application_launch)
+    add_subdirectory(tests/bundle_resources)
+    add_subdirectory(tests/profile_management)
+  endif()
+else()
+  message(STATUS "Unit tests disabled")
+endif()
+
 if(GCRYPT_FOUND)
   add_definitions(-DHAVE_LIBGCRYPT)
 endif()
@@ -548,21 +641,29 @@ if(UNIX AND NOT APPLE)
     add_definitions(-DHAVE_LIBAVAHI_UI)
     add_definitions(-DHAVE_LIBAVAHI_CLIENT)
   endif()
+else()
+  if(APPLE)
+    message(STATUS "Avahi disabled on macOS (will use Bonjour instead)")
+  endif()
 endif()
 
 option(WITH_ICON_CACHE "Generate the icon cache during install target" ON)
 if(WITH_ICON_CACHE)
-  message(STATUS "Icon cache will be generated")
-  add_definitions(-DWITH_ICON_CACHE)
-  find_program(XDG_ICON_RESOURCE NAMES xdg-icon-resource)
-  if(XDG_ICON_RESOURCE)
-    message(STATUS "Theme icon cache will be rebuilt")
-    add_custom_target(
-      desktop-icon
-      COMMAND ${XDG_ICON_RESOURCE} forceupdate --theme hicolor
-      COMMENT "Updating icon theme")
+  if(NOT APPLE)
+    message(STATUS "Icon cache will be generated")
+    add_definitions(-DWITH_ICON_CACHE)
+    find_program(XDG_ICON_RESOURCE NAMES xdg-icon-resource)
+    if(XDG_ICON_RESOURCE)
+      message(STATUS "Theme icon cache will be rebuilt")
+      add_custom_target(
+        desktop-icon
+        COMMAND ${XDG_ICON_RESOURCE} forceupdate --theme hicolor
+        COMMENT "Updating icon theme")
+    else()
+      message(WARNING "Cannot update icon cache: xdg-icon-resource not found")
+    endif()
   else()
-    message(WARNING "Cannot update icon cache: xdg-icon-resource not found")
+    message(STATUS "Icon cache generation skipped on macOS (not needed for app bundles)")
   endif()
 else()
   message(STATUS "Icons cache won't be generated automatically")
@@ -571,8 +672,12 @@ endif()
 option(WITH_UPDATE_DESKTOP_DB
        "Generate desktop files MIME types cache database" ON)
 if(WITH_UPDATE_DESKTOP_DB)
-  message(STATUS "Desktop MIME types cache database enabled")
-  add_definitions(-DWITH_UPDATE_DESKTOP_DB)
+  if(NOT APPLE)
+    message(STATUS "Desktop MIME types cache database enabled")
+    add_definitions(-DWITH_UPDATE_DESKTOP_DB)
+  else()
+    message(STATUS "Desktop MIME types cache database skipped on macOS (not applicable)")
+  endif()
 else()
   message(STATUS "Desktop MIME types cache database won't be generated")
 endif()

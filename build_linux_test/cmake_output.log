@@ -1,0 +1,148 @@
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found PkgConfig: /usr/bin/pkg-config (found version "0.29.2") 
+-- Checking for module 'libpcre2-8'
+--   Found libpcre2-8, version 10.39
+-- PCRE2-Libs: /usr/lib/aarch64-linux-gnu/libpcre.so
+-- PCRE2-Include-Dirs: /usr/include
+-- Found Intl: built in to C library  
+-- Performing Test Wno-unused-result
+-- Performing Test Wno-unused-result - Success
+-- Performing Test Wno-unused-but-set-variable
+-- Performing Test Wno-unused-but-set-variable - Success
+-- Performing Test Wno-deprecated-declarations
+-- Performing Test Wno-deprecated-declarations - Success
+-- Performing Test Wimplicit-function-declaration
+-- Performing Test Wimplicit-function-declaration - Success
+-- Performing Test Wredundant-decls
+-- Performing Test Wredundant-decls - Success
+-- Looking for include file sys/socket.h
+-- Looking for include file sys/socket.h - found
+-- Looking for include file arpa/inet.h
+-- Looking for include file arpa/inet.h - found
+-- Looking for include file netinet/in.h
+-- Looking for include file netinet/in.h - found
+-- Looking for include file netinet/tcp.h
+-- Looking for include file netinet/tcp.h - found
+-- Looking for include file termios.h
+-- Looking for include file termios.h - found
+-- Looking for include file netdb.h
+-- Looking for include file netdb.h - found
+-- Looking for include file fcntl.h
+-- Looking for include file fcntl.h - found
+-- Looking for include file unistd.h
+-- Looking for include file unistd.h - found
+-- Looking for include file sys/un.h
+-- Looking for include file sys/un.h - found
+-- Looking for include file errno.h
+-- Looking for include file errno.h - found
+-- Remmina version: 1.4.41
+-- Git Revision: n/a
+-- Folders won't be removed during uninstall target
+-- Checking for one of the modules 'glib-2.0'
+-- Checking for module 'gmodule-2.0'
+--   Found gmodule-2.0, version 2.72.4
+-- Found GLib: /usr/lib/aarch64-linux-gnu/libglib-2.0.so (found version "2.72.4") 
+-- Checking for one of the modules 'gio-2.0'
+-- Checking for module 'gio-unix-2.0'
+--   Found gio-unix-2.0, version 2.72.4
+-- Checking for one of the modules 'gobject-2.0'
+-- Found GObject: /usr/lib/aarch64-linux-gnu/libgobject-2.0.so (found version "2.72.4") 
+-- Found GIO: /usr/lib/aarch64-linux-gnu/libgio-2.0.so (found version "2.72.4") 
+-- Checking for one of the modules 'atk'
+-- Found ATK: /usr/lib/aarch64-linux-gnu/libatk-1.0.so (found version "2.36.0") 
+-- Checking for one of the modules 'gdk-3.0'
+-- Checking for module 'harfbuzz'
+--   Found harfbuzz, version 2.7.4
+-- Checking for one of the modules 'pango'
+-- Found Pango: /usr/lib/aarch64-linux-gnu/libpango-1.0.so (found version "1.50.6") 
+-- Found GDK3: /usr/lib/aarch64-linux-gnu/libgdk-3.so (found version "3.24.33") 
+-- Found Pango: /usr/lib/aarch64-linux-gnu/libpango-1.0.so (found version "1.50.6") 
+-- Checking for one of the modules 'cairo'
+-- Found Cairo: /usr/lib/aarch64-linux-gnu/libcairo.so (found version "1.16.0") 
+-- Checking for one of the modules 'gdk-pixbuf-2.0'
+-- Found GDKPixbuf: /usr/lib/aarch64-linux-gnu/libgdk_pixbuf-2.0.so (found version "") 
+-- Found GTK3: /usr/lib/aarch64-linux-gnu/libgtk-3.so (found suitable version "3.24.33", minimum required is "3.14.0") 
+-- Checking for module 'wayland-client'
+--   Found wayland-client, version 1.20.0
+-- Wayland library found.
+-- Looking for pthread.h
+-- Looking for pthread.h - found
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE  
+-- Finding suggested package GCRYPT.
+--   Disable this using "-DWITH_GCRYPT=OFF".
+-- Found GCRYPT: /usr/lib/aarch64-linux-gnu/libgcrypt.so  
+-- Found OpenSSL: /usr/lib/aarch64-linux-gnu/libcrypto.so (found version "3.0.2")  
+-- Found sodium: /usr/lib/aarch64-linux-gnu/libsodium.so  
+-- sodium_LIBRARY_RELEASE: /usr/lib/aarch64-linux-gnu/libsodium.so
+-- sodium_INCLUDE_DIR: /usr/include
+-- sodium_LIBRARY_DEBUG: /usr/lib/aarch64-linux-gnu/libsodium.so
+-- Enabling news check connecting to remmina.org
+-- Enabling stats
+-- Enabling tip of the day
+-- Enabling man pages.
+-- Enabling unit tests
+-- Checking for module 'glib-2.0'
+--   Found glib-2.0, version 2.72.4
+-- Checking for module 'gmodule-2.0'
+--   Found gmodule-2.0, version 2.72.4
+-- Plugin loading tests configured
+-- Finding suggested package Avahi.
+--   Disable this using "-DWITH_AVAHI=OFF".
+-- Checking for module 'avahi-client'
+--   Found avahi-client, version 0.8
+-- Avahi-Libs found: /usr/lib/aarch64-linux-gnu/libavahi-common.so;/usr/lib/aarch64-linux-gnu/libavahi-client.so;/usr/lib/aarch64-linux-gnu/libavahi-ui-gtk3.so
+-- Avahi-Include-Dirs found: /usr/include/avahi-common;/usr/include/avahi-client;/usr/include/avahi-ui
+-- AVAHI_INCLUDE_DIRS=/usr/include/avahi-common;/usr/include/avahi-client;/usr/include/avahi-ui
+-- AVAHI_LIBRARIES=/usr/lib/aarch64-linux-gnu/libavahi-common.so;/usr/lib/aarch64-linux-gnu/libavahi-client.so;/usr/lib/aarch64-linux-gnu/libavahi-ui-gtk3.so
+-- Icon cache will be generated
+CMake Warning at CMakeLists.txt:663 (message):
+  Cannot update icon cache: xdg-icon-resource not found
+
+
+-- Desktop MIME types cache database enabled
+-- Linux detected, building with Intl
+-- Finding suggested package LIBSSH.
+--   Disable this using "-DWITH_LIBSSH=OFF".
+-- Found LIBSSH: /usr/lib/aarch64-linux-gnu/libssh.so  
+-- Avahi support enabled (Linux)
+-- Finding suggested package VTE.
+--   Disable this using "-DWITH_VTE=OFF".
+-- Checking for module 'vte-2.91'
+--   Found vte-2.91, version 0.68.0
+-- Found VTE: /usr/lib/aarch64-linux-gnu/libvte-2.91.so  
+-- Sodium found
+-- Sodium include dirs /usr/include
+-- Checking for module 'ayatana-appindicator3-0.1'
+--   No package 'ayatana-appindicator3-0.1' found
+-- Checking for module 'appindicator3-0.1'
+--   Found appindicator3-0.1, version 12.10.0
+-- Found APPINDICATOR: /usr/lib/aarch64-linux-gnu/libappindicator3.so  
+-- AppIndicator library dirs /usr/lib/aarch64-linux-gnu/libappindicator3.so
+-- AppIndicator include dirs /usr/include/libappindicator3-0.1
+-- Checking for module 'json-glib-1.0'
+--   Found json-glib-1.0, version 1.6.6
+-- Found JSONGLIB: /usr/lib/aarch64-linux-gnu/libjson-glib-1.0.so  
+CMake Error at /usr/share/cmake-3.22/Modules/FindPackageHandleStandardArgs.cmake:230 (message):
+  Could NOT find CURL (missing: CURL_LIBRARY CURL_INCLUDE_DIR)
+Call Stack (most recent call first):
+  /usr/share/cmake-3.22/Modules/FindPackageHandleStandardArgs.cmake:594 (_FPHSA_FAILURE_MESSAGE)
+  /usr/share/cmake-3.22/Modules/FindCURL.cmake:181 (find_package_handle_standard_args)
+  cmake/FindOptionalPackage.cmake:27 (find_package)
+  src/CMakeLists.txt:275 (find_required_package)
+
+
+-- Configuring incomplete, errors occurred!
+See also "/workspace/build_linux_test/CMakeFiles/CMakeOutput.log".

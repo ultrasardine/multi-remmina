@@ -64,6 +64,9 @@
 #include "remmina_curl_connector.h"
 #include "remmina_utils.h"
 #include "remmina_unlock.h"
+#ifdef __APPLE__
+#include "remmina_bundle_macos.h"
+#endif
 
 static GPtrArray* remmina_plugin_table = NULL;
 
@@ -514,7 +517,15 @@ void remmina_plugin_manager_init(void)
 		array_size += 1;
 		
 	}
+	
+#ifdef __APPLE__
+	/* On macOS, use bundle plugin directory */
+	gchar *bundle_plugin_dir = remmina_get_plugin_dir();
+	g_ptr_array_add(plugin_dirs, bundle_plugin_dir);
+#else
 	g_ptr_array_add(plugin_dirs, REMMINA_RUNTIME_PLUGINDIR);
+#endif
+	
 	remmina_plugin_manager_load_plugins(plugin_dirs, array_size, FALSE);
 
 

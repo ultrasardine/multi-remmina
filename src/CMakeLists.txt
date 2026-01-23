@@ -146,6 +146,19 @@ set(RESOURCE_LIST
     ${CMAKE_CURRENT_SOURCE_DIR}/../data/ui/remmina_unlock.glade)
 message(DEBUG "Source list set to: " ${REMMINA_SRCS})
 
+# Add macOS-specific source files
+if(APPLE)
+  list(APPEND REMMINA_SRCS
+    "remmina_keychain_macos.c"
+    "remmina_keychain_macos.h"
+    "remmina_bonjour_macos.c"
+    "remmina_bonjour_macos.h"
+    "remmina_bundle_macos.c"
+    "remmina_bundle_macos.h"
+  )
+  message(STATUS "Added macOS Keychain, Bonjour, and Bundle support files")
+endif()
+
 compile_gresources(
   RESOURCE_FILE
   XML_OUT
@@ -194,9 +207,12 @@ if(GCRYPT_FOUND)
   target_link_libraries(remmina ${GCRYPT_LIBRARIES})
 endif()
 
-if(AVAHI_FOUND)
+if(AVAHI_FOUND AND NOT APPLE)
   include_directories(SYSTEM ${AVAHI_INCLUDE_DIRS})
   target_link_libraries(remmina ${AVAHI_LIBRARIES})
+  message(STATUS "Avahi support enabled (Linux)")
+elseif(APPLE)
+  message(STATUS "Avahi support disabled on macOS (using Bonjour instead)")
 endif()
 
 if(OPENSSL_FOUND)
@@ -262,6 +278,12 @@ if(NOT CURL_FOUND)
 else()
   include_directories(SYSTEM ${CURL_INCLUDE_DIRS})
   target_link_libraries(remmina ${CURL_LIBRARIES})
+endif()
+
+# Link macOS frameworks
+if(APPLE)
+  target_link_libraries(remmina "-framework Security" "-framework CoreFoundation")
+  message(STATUS "Linked macOS Security and CoreFoundation frameworks")
 endif()
 
 find_required_package(PCRE2)

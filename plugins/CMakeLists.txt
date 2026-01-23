@@ -34,6 +34,56 @@
 
 # Needed FreeRDP version to build freerdp plugin
 
+# macOS-specific plugin configuration
+if(APPLE)
+  message(STATUS "Configuring plugins for macOS")
+  
+  # Add Homebrew search paths for plugin dependencies
+  # Support both Intel (/usr/local) and Apple Silicon (/opt/homebrew) installations
+  list(APPEND CMAKE_PREFIX_PATH
+    /usr/local
+    /opt/homebrew
+    /usr/local/opt/freerdp
+    /opt/homebrew/opt/freerdp
+    /usr/local/opt/libvncserver
+    /opt/homebrew/opt/libvncserver
+    /usr/local/opt/libssh
+    /opt/homebrew/opt/libssh
+  )
+  
+  # Add Homebrew include paths for plugin dependencies
+  include_directories(SYSTEM
+    /usr/local/include
+    /opt/homebrew/include
+    /usr/local/opt/freerdp/include
+    /opt/homebrew/opt/freerdp/include
+    /usr/local/opt/libvncserver/include
+    /opt/homebrew/opt/libvncserver/include
+    /usr/local/opt/libssh/include
+    /opt/homebrew/opt/libssh/include
+  )
+  
+  # Add Homebrew library paths for plugin dependencies
+  link_directories(
+    /usr/local/lib
+    /opt/homebrew/lib
+    /usr/local/opt/freerdp/lib
+    /opt/homebrew/opt/freerdp/lib
+    /usr/local/opt/libvncserver/lib
+    /opt/homebrew/opt/libvncserver/lib
+    /usr/local/opt/libssh/lib
+    /opt/homebrew/opt/libssh/lib
+  )
+  
+  # Set plugin RPATH for bundle loading
+  # Plugins need to find libraries relative to the bundle
+  set(CMAKE_INSTALL_RPATH "@executable_path/../Frameworks;@executable_path/../lib;@loader_path")
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+  
+  message(STATUS "macOS plugin configuration complete:")
+  message(STATUS "  - Plugin RPATH: ${CMAKE_INSTALL_RPATH}")
+  message(STATUS "  - Homebrew paths added for FreeRDP, libvncserver, libssh")
+endif()
 
 include_directories(${CMAKE_SOURCE_DIR}/plugins)
 

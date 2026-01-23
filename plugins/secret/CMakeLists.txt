@@ -32,9 +32,17 @@
 # files in the program, then also delete it here.
 
 
-find_suggested_package(Libsecret)
-if(LIBSECRET_FOUND)
+if(NOT APPLE)
+    find_suggested_package(Libsecret)
+endif()
+
+if(LIBSECRET_FOUND OR APPLE)
     set(REMMINA_PLUGIN_SECRET_SRCS src/glibsecret_plugin.c)
+    
+    if(APPLE)
+        # Add macOS Keychain implementation
+        list(APPEND REMMINA_PLUGIN_SECRET_SRCS ${CMAKE_SOURCE_DIR}/src/remmina_keychain_macos.c)
+    endif()
 
     add_library(remmina-plugin-secret MODULE ${REMMINA_PLUGIN_SECRET_SRCS})
     set_target_properties(remmina-plugin-secret PROPERTIES PREFIX "")
@@ -43,8 +51,15 @@ if(LIBSECRET_FOUND)
     include_directories(SYSTEM ${GTK3_INCLUDE_DIRS})
     target_link_libraries(remmina-plugin-secret ${GTK_LIBRARIES})
 
-    include_directories(SYSTEM ${LIBSECRET_INCLUDE_DIRS})
-    target_link_libraries(remmina-plugin-secret ${LIBSECRET_LIBRARIES} ${GLIB_LIBRARY})
+    if(APPLE)
+        # Link Security and CoreFoundation frameworks for macOS Keychain support
+        target_link_libraries(remmina-plugin-secret "-framework Security" "-framework CoreFoundation" ${GLIB_LIBRARY})
+        # Include src directory for remmina_keychain_macos.h
+        target_include_directories(remmina-plugin-secret PRIVATE ${CMAKE_SOURCE_DIR}/src)
+    else()
+        include_directories(SYSTEM ${LIBSECRET_INCLUDE_DIRS})
+        target_link_libraries(remmina-plugin-secret ${LIBSECRET_LIBRARIES} ${GLIB_LIBRARY})
+    endif()
 
     install(TARGETS remmina-plugin-secret DESTINATION ${REMMINA_PLUGINDIR})
 endif()

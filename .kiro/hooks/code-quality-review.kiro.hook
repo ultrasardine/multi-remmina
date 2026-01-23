@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "Code Quality Review",
+  "description": "Analyzes modified C/C++ source files for code quality improvements, including code smells, design patterns, best practices, readability, maintainability, and performance optimizations while maintaining existing functionality",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.c",
+      "src/**/*.h",
+      "plugins/**/*.c",
+      "plugins/**/*.h"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the modified code for potential improvements:\n1. Identify code smells and anti-patterns\n2. Suggest design pattern improvements following GTK/GLib conventions\n3. Check adherence to Remmina coding standards (K&R style, naming conventions, GLib types)\n4. Recommend readability and maintainability enhancements\n5. Identify performance optimization opportunities\n6. Ensure proper memory management (g_malloc/g_free usage)\n7. Verify error handling and resource cleanup\n\nProvide actionable suggestions that maintain existing functionality. Focus on practical improvements specific to C and GTK development."
+  }
+}

@@ -72,6 +72,7 @@ set(APPICONSCALE_EMBLEMS_DATA
 install(FILES ${APPICONSCALE_ACTIONS_DATA} DESTINATION ${APPICONSCALE_ACTIONS_DIR})
 install(FILES ${APPICONSCALE_EMBLEMS_DATA} DESTINATION ${APPICONSCALE_EMBLEMS_DIR})
 
-if(WITH_ICON_CACHE)
+# Skip icon cache generation on macOS (not needed for app bundles)
+if(WITH_ICON_CACHE AND NOT APPLE)
     gtk_update_icon_cache("${REMMINA_DATADIR}/icons/hicolor")
 endif()

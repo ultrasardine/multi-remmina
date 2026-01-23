@@ -38,7 +38,147 @@
 #include "remmina_avahi.h"
 #include "remmina/remmina_trace_calls.h"
 
-#ifdef HAVE_LIBAVAHI_CLIENT
+#ifdef __APPLE__
+/* macOS uses Bonjour instead of Avahi */
+#include "remmina_bonjour_macos.h"
+
+/* Structure to hold service discovery state for macOS */
+typedef struct {
+	RemminaAvahi *ga;
+	gchar *service_type;
+} MacOSServiceContext;
+
+/* Free service context */
+static void
+macos_service_context_free(MacOSServiceContext *ctx)
+{
+	if (ctx) {
+		g_free(ctx->service_type);
+		g_free(ctx);
+	}
+}
+
+/* Callback adapter to convert Bonjour callback to Avahi-style hash table */
+static void
+macos_service_callback_adapter(const gchar *service_name,
+				const gchar *hostname,
+				guint16 port,
+				gpointer user_data)
+{
+	MacOSServiceContext *ctx = (MacOSServiceContext *)user_data;
+	RemminaAvahi *ga = ctx->ga;
+	gchar *key;
+	gchar *value;
+
+	/* Create key in same format as Avahi: "name,type,domain" */
+	key = g_strdup_printf("%s,%s,local", service_name, ctx->service_type);
+	
+	/* Check if already in hash table */
+	if (g_hash_table_lookup(ga->discovered_services, key)) {
+		g_free(key);
+		return;
+	}
+
+	/* Create value in same format as Avahi: "[hostname]:port" */
+	value = g_strdup_printf("[%s]:%i", hostname, port);
+	g_hash_table_insert(ga->discovered_services, key, value);
+	/* key and value will be freed with g_free when the hash table is freed */
+
+	g_print("(remmina-applet bonjour) Added service '%s' (%s)\n", value, ctx->service_type);
+}
+
+RemminaAvahi* remmina_avahi_new(void)
+{
+	TRACE_CALL(__func__);
+	RemminaAvahi* ga;
+
+	ga = g_new0(RemminaAvahi, 1);
+	ga->discovered_services = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	ga->started = FALSE;
+	/* Use priv to store list of service contexts for cleanup */
+	ga->priv = NULL;
+
+	return ga;
+}
+
+void remmina_avahi_start(RemminaAvahi* ga)
+{
+	TRACE_CALL(__func__);
+	MacOSServiceContext *ctx;
+	GSList *contexts = NULL;
+	const gchar *service_types[] = { "_rfb._tcp", "_rdp._tcp", "_ssh._tcp", NULL };
+	gint i;
+
+	if (ga->started)
+		return;
+
+	ga->started = TRUE;
+
+	/* Initialize Bonjour service discovery */
+	if (!remmina_service_discovery_init()) {
+		g_warning("Failed to initialize Bonjour service discovery");
+		return;
+	}
+
+	/* Start browsing for multiple service types */
+	for (i = 0; service_types[i] != NULL; i++) {
+		ctx = g_new0(MacOSServiceContext, 1);
+		ctx->ga = ga;
+		ctx->service_type = g_strdup(service_types[i]);
+		
+		if (!remmina_service_discovery_browse(service_types[i], 
+						       macos_service_callback_adapter, 
+						       ctx)) {
+			g_warning("Failed to start Bonjour browsing for %s", service_types[i]);
+			macos_service_context_free(ctx);
+			continue;
+		}
+		
+		/* Store context for cleanup */
+		contexts = g_slist_append(contexts, ctx);
+	}
+
+	/* Store contexts list in priv for cleanup */
+	ga->priv = (RemminaAvahiPriv*)contexts;
+
+	g_print("(remmina-applet bonjour) Started service discovery\n");
+}
+
+void remmina_avahi_stop(RemminaAvahi* ga)
+{
+	TRACE_CALL(__func__);
+	GSList *contexts;
+	
+	if (!ga->started)
+		return;
+
+	g_hash_table_remove_all(ga->discovered_services);
+	
+	/* Stop Bonjour service discovery */
+	remmina_service_discovery_stop();
+	
+	/* Free all service contexts */
+	contexts = (GSList *)ga->priv;
+	g_slist_free_full(contexts, (GDestroyNotify)macos_service_context_free);
+	ga->priv = NULL;
+	
+	ga->started = FALSE;
+}
+
+void remmina_avahi_free(RemminaAvahi* ga)
+{
+	TRACE_CALL(__func__);
+	if (ga == NULL)
+		return;
+
+	remmina_avahi_stop(ga);
+
+	g_hash_table_destroy(ga->discovered_services);
+	g_free(ga);
+}
+
+#elif defined(HAVE_LIBAVAHI_CLIENT)
+/* Linux/Unix uses Avahi */
 
 #include <avahi-client/client.h>
 #include <avahi-client/lookup.h>
@@ -274,6 +414,7 @@ void remmina_avahi_free(RemminaAvahi* ga)
 }
 
 #else
+/* Stub implementation when neither Avahi nor macOS Bonjour is available */
 
 RemminaAvahi* remmina_avahi_new(void)
 {

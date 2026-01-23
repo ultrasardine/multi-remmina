@@ -61,6 +61,9 @@
 #include "remmina_public.h"
 #include "remmina_utils.h"
 #include "remmina/remmina_trace_calls.h"
+#ifdef __APPLE__
+#include "remmina_bundle_macos.h"
+#endif
 
 GtkWidget*
 remmina_public_create_combo_entry(const gchar *text, const gchar *def, gboolean descending)
@@ -554,7 +557,16 @@ GtkBuilder* remmina_public_gtk_builder_new_from_file(gchar *filename)
 {
 	TRACE_CALL(__func__);
 	GError *err = NULL;
-	gchar *ui_path = g_strconcat(REMMINA_RUNTIME_UIDIR, G_DIR_SEPARATOR_S, filename, NULL);
+	gchar *ui_path;
+	
+#ifdef __APPLE__
+	gchar *ui_dir = remmina_get_ui_dir();
+	ui_path = g_build_filename(ui_dir, filename, NULL);
+	g_free(ui_dir);
+#else
+	ui_path = g_strconcat(REMMINA_RUNTIME_UIDIR, G_DIR_SEPARATOR_S, filename, NULL);
+#endif
+	
 	GtkBuilder *builder = gtk_builder_new();
 	gtk_builder_add_from_file(builder, ui_path, &err);
 	if (err != NULL) {

@@ -35,6 +35,8 @@
 #ifndef __BACKEND_LIBSECRET_H__
 #define __BACKEND_LIBSECRET_H__
 
+#ifndef __APPLE__
 #include <libsecret/secret.h>
+#endif
 
 #endif // __BACKEND_LIBSECRET_H__

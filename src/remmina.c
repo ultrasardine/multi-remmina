@@ -69,6 +69,9 @@
 #include "remmina_widget_pool.h"
 #include "remmina/remmina_trace_calls.h"
 #include "remmina_info.h"
+#ifdef __APPLE__
+#include "remmina_bundle_macos.h"
+#endif
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -306,8 +309,18 @@ static void remmina_on_startup(GApplication *app)
 	* windows with .desktop file which has the same StartupWMClass */
 	gdk_set_program_class(REMMINA_APP_ID);
 
+#ifdef __APPLE__
+	/* On macOS, use bundle resource directory for icons */
+	gchar *resource_dir = remmina_get_resource_dir();
+	gchar *icon_path = g_build_filename(resource_dir, "icons", NULL);
+	gtk_icon_theme_append_search_path(gtk_icon_theme_get_default(), icon_path);
+	g_free(icon_path);
+	g_free(resource_dir);
+#else
 	gtk_icon_theme_append_search_path(gtk_icon_theme_get_default(),
 					  REMMINA_RUNTIME_DATADIR G_DIR_SEPARATOR_S "icons");
+#endif
+	
 	g_application_hold(app);
 	remmina_info_schedule();
 
