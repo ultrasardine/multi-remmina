@@ -102,12 +102,19 @@ jobs:
           --plugin gtk \
           --output appimage || echo "AppImage creation had warnings"
         
-        # Check if AppImage was created
-        if ls Multi-Remmina*.AppImage 1> /dev/null 2>&1; then
-          echo "AppImage created successfully"
+        # Check if AppImage was created (it may be named Remmina-*.AppImage or Multi-Remmina-*.AppImage)
+        if ls *-x86_64.AppImage 1> /dev/null 2>&1; then
+          # Rename to Multi-Remmina if needed
+          for file in *-x86_64.AppImage; do
+            if [[ "$file" != Multi-Remmina-* ]]; then
+              mv "$file" "Multi-Remmina-x86_64.AppImage"
+            fi
+          done
+          echo "AppImage created successfully:"
           ls -lh Multi-Remmina*.AppImage
         else
           echo "ERROR: AppImage was not created"
+          ls -la *.AppImage || echo "No AppImage files found"
           exit 1
         fi
     
