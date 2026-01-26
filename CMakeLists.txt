@@ -1,9 +1,12 @@
-# Remmina - The GTK+ Remote Desktop Client
+# Multi-Remmina - The Multiplatform GTK+ Remote Desktop Client
+#
+# Multi-Remmina is a multiplatform port extending Remmina to macOS and FreeBSD
 #
 # Copyright (C) 2011 Marc-Andre Moreau
 # Copyright (C) 2014-2015 Antenore Gatta, Fabio Castelli, Giovanni Panozzo
 # Copyright (C) 2016-2022 Antenore Gatta, Giovanni Panozzo
 # Copyright (C) 2022-2023 Antenore Gatta, Giovanni Panozzo, Hiroyuki Tanaka
+# Copyright (C) 2024-2026 Multi-Remmina Contributors
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -35,9 +38,9 @@ cmake_minimum_required(VERSION 3.10.0)
 cmake_policy(SET CMP0048 NEW)
 
 project(
-  Remmina
+  Multi-Remmina
   VERSION 1.4.41
-  DESCRIPTION "The Gtk Remote Desktop Client"
+  DESCRIPTION "The Multiplatform GTK Remote Desktop Client"
   LANGUAGES C CXX
 )
 
@@ -376,7 +379,7 @@ endif()
 # Versioning
 set(WITH_LIBRARY_VERSIONING "ON")
 
-message(STATUS "Remmina version: ${Remmina_VERSION}")
+message(STATUS "Multi-Remmina version: ${Remmina_VERSION}")
 
 if (NOT DEFINED REMMINA_GIT_REVISION)
   include(GetGitRevisionDescription)
@@ -389,7 +392,7 @@ endif()
 message(STATUS "Git Revision: ${REMMINA_GIT_REVISION}")
 
 # REMMINA_APP_ID should follow Gnome Application ID rules
-set(REMMINA_APP_ID "org.remmina.Remmina")
+set(REMMINA_APP_ID "org.multi-remmina.MultiRemmina")
 
 if(NOT REMMINA_DATADIR)
   set(REMMINA_DATADIR "${CMAKE_INSTALL_FULL_DATADIR}")

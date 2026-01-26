@@ -64,7 +64,6 @@ install_dependencies() {
     local optional_packages=(
         "libsoup@2"
         "vte3"
-        "webkit2gtk"
     )
     
     local missing_packages=()
@@ -144,6 +143,8 @@ run_cmake() {
         -DWITH_AVAHI=OFF \
         -DWITH_APPINDICATOR=OFF \
         -DWITH_TELEPATHY=OFF \
+        -DWITH_WEBKIT2GTK=OFF \
+        -DWITH_FREERDP3=ON \
         -DWITH_MACOS_KEYCHAIN=ON \
         -DCMAKE_PREFIX_PATH="$(brew --prefix)" \
         -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)" \

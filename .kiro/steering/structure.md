@@ -3,16 +3,17 @@
 ## Top-Level Organization
 
 ```
-remmina/
+multi-remmina/
 ├── src/                    # Main application source code
 ├── plugins/                # Protocol plugins (RDP, VNC, SSH, etc.)
 ├── data/                   # Application data (UI, icons, themes, desktop files)
 ├── cmake/                  # CMake modules and build configuration
 ├── po/                     # Translation files (gettext)
 ├── ci/                     # CI/CD configuration and Docker files
-├── flatpak/                # Flatpak packaging configuration
-├── snap/                   # Snap packaging configuration
+├── flatpak/                # Flatpak packaging configuration (Linux)
+├── snap/                   # Snap packaging configuration (Linux)
 ├── scripts/                # Build and maintenance scripts
+├── docs/                   # Documentation
 └── .kiro/                  # Kiro AI assistant configuration
 ```
 
@@ -26,6 +27,7 @@ Main application code organized by functionality:
 - `remmina_ssh*.c` - SSH/SFTP functionality
 - `remmina_pref*.c` - Preferences/settings
 - `remmina_*_window.c` - Various UI windows
+- `remmina_*_macos.c` - macOS-specific implementations
 - `include/` - Public header files
 
 ## Plugins (`plugins/`)
@@ -37,7 +39,7 @@ Each protocol is implemented as a plugin:
 - `x2go/` - X2Go protocol
 - `www/` - HTTP/WWW protocol
 - `exec/` - Execute commands
-- `secret/` - Secret storage (GNOME Keyring, KWallet)
+- `secret/` - Secret storage (GNOME Keyring, KWallet, macOS Keychain)
 - `kwallet/` - KDE Wallet integration
 - `python_wrapper/` - Python plugin support
 - `tool_hello_world/` - Example plugin
@@ -91,22 +93,21 @@ All source files include:
 
 ## Plugin Architecture
 Plugins are dynamically loaded shared libraries:
-- Located in `${libdir}/remmina/plugins/`
+- Located in `${libdir}/multi-remmina/plugins/` or `${libdir}/remmina/plugins/`
 - Export plugin initialization functions
 - Register protocol handlers with main application
 - Can be protocol plugins or tool plugins
 
 ## Configuration & Runtime
-- User config: `$HOME/.config/remmina/`
-- Connection profiles: `$HOME/.local/share/remmina/`
-- System data: `/usr/share/remmina/` or `/usr/local/share/remmina/`
-- Plugins: `/usr/lib/remmina/plugins/` or `/usr/local/lib/remmina/plugins/`
+- User config: `$HOME/.config/multi-remmina/` (or `$HOME/.config/remmina/` for compatibility)
+- Connection profiles: `$HOME/.local/share/multi-remmina/` (or `$HOME/.local/share/remmina/`)
+- System data: `/usr/share/multi-remmina/` or `/usr/local/share/multi-remmina/`
+- Plugins: `/usr/lib/multi-remmina/plugins/` or `/usr/local/lib/multi-remmina/plugins/`
 
 ## Important Files
 - `CMakeLists.txt` - Root build configuration
 - `config.h.in` - Configuration template
 - `buildflags.h.in` - Build flags template
-- `remmina.doap` - Project metadata (DOAP format)
 - `AUTHORS` - Contributors list
 - `CONTRIBUTING.md` - Contribution guidelines
 - `CHANGELOG.md` - Version history

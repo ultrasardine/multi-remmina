@@ -1,11 +1,18 @@
-Welcome to the Remmina community
+# Contact
 
-Accept and offer criticism constructively.
-Let anyone have the privacy they desire.
+Welcome to the Multi-Remmina community!
 
-Settle differences within these boundaries.
+## Code of Conduct
+- Accept and offer criticism constructively.
+- Let anyone have the privacy they desire.
+- Settle differences within these boundaries.
 
-Finding yourself unable to do so, e-mail admin@remmina.org,
-answered by the project team.
+## Getting Help
+- **GitHub Issues**: [Report bugs or request features](https://github.com/ultrasardine/multi-remmina/issues)
+- **GitHub Discussions**: [Ask questions and discuss](https://github.com/ultrasardine/multi-remmina/discussions)
 
-We are in an IRC room on libera.chat, in the #remmina channel, you can also use a [web client](https://web.libera.chat/?nick=remminer|?#remmina).
+## Upstream Project
+Multi-Remmina is based on the original Remmina project:
+- **Original Remmina**: [https://www.remmina.org/](https://www.remmina.org/)
+- **Original GitLab**: [https://gitlab.com/Remmina/Remmina](https://gitlab.com/Remmina/Remmina)
+- **IRC**: #remmina on libera.chat ([web client](https://web.libera.chat/?nick=remminer|?#remmina))

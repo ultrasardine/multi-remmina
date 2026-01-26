@@ -1,6 +1,6 @@
 # Product Overview
 
-Remmina is a GTK-based remote desktop client for Linux/Unix systems that supports multiple protocols:
+Multi-Remmina is a multiplatform remote desktop client based on GTK that supports multiple protocols:
 - RDP (Remote Desktop Protocol)
 - VNC (Virtual Network Computing)
 - SPICE
@@ -17,12 +17,16 @@ Remmina is a GTK-based remote desktop client for Linux/Unix systems that support
 - SFTP/FTP client capabilities
 - Multi-monitor support
 - Kiosk mode for dedicated remote desktop terminals
+- Cross-platform: Linux, FreeBSD, and macOS
 
 ## Target Platforms
-- Primary: Linux (Ubuntu, Debian, Fedora, Arch, etc.)
-- FreeBSD support
-- Snap and Flatpak packaging
-- macOS port in progress (see `.kiro/specs/macos-port.md`)
+- Linux (Ubuntu, Debian, Fedora, Arch, etc.)
+- FreeBSD
+- macOS (active port)
+- Snap and Flatpak packaging (Linux)
+
+## Project History
+Multi-Remmina is a multiplatform fork of the original Remmina project, extending support to macOS and FreeBSD while maintaining compatibility with the Linux version.
 
 ## License
 GPLv2+ with OpenSSL linking exception

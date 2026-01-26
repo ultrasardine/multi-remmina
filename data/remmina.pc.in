@@ -3,8 +3,8 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: Remmina
-Description: The GTK+ Remote Desktop Client
+Name: Multi-Remmina
+Description: The Multiplatform GTK+ Remote Desktop Client
 Version: @VERSION@
 Requires: 
 Libs: 

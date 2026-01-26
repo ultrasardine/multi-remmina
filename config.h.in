@@ -13,6 +13,7 @@
 #cmakedefine HAVE_ERRNO_H
 
 #define remmina			"remmina"
+#define multi_remmina		"multi-remmina"
 #define REMMINA_APP_ID		"${REMMINA_APP_ID}"
 #define VERSION			"${Remmina_VERSION}"
 #define REMMINA_GIT_REVISION	"${REMMINA_GIT_REVISION}"
