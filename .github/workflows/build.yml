@@ -166,6 +166,32 @@ jobs:
     - name: Build
       run: cmake --build build --config ${{env.BUILD_TYPE}} -j$(sysctl -n hw.ncpu)
     
+    - name: Generate version
+      id: version
+      run: |
+        # Use CalVer: YYYY.M.PATCH (same as release job)
+        YEAR=$(date +%Y)
+        MONTH=$(date +%-m)
+        
+        # Find the latest tag for this month
+        LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
+        
+        if [ -z "$LATEST_TAG" ]; then
+          # First release this month
+          PATCH=0
+        else
+          # Increment patch version
+          PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
+          PATCH=$((PATCH + 1))
+        fi
+        
+        VERSION="${YEAR}.${MONTH}.${PATCH}"
+        SHORT_SHA=$(git rev-parse --short HEAD)
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+        echo "Generated version: $VERSION"
+    
     - name: Run tests
       working-directory: build
       run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure || true
@@ -205,7 +231,23 @@ jobs:
         # Copy resources (icons, UI files, themes)
         cp -r data/ui Multi-Remmina.app/Contents/Resources/ 2>/dev/null || true
         cp -r data/theme Multi-Remmina.app/Contents/Resources/ 2>/dev/null || true
-        find data/desktop -name "*.png" -exec cp {} Multi-Remmina.app/Contents/Resources/ \; 2>/dev/null || true
+        
+        # Copy app icon (convert SVG to ICNS for macOS)
+        # First try to find and copy the SVG icon
+        if [ -f "data/desktop/scalable/apps/org.multi-remmina.MultiRemmina.svg" ]; then
+          cp data/desktop/scalable/apps/org.multi-remmina.MultiRemmina.svg Multi-Remmina.app/Contents/Resources/
+        elif [ -f "data/desktop/scalable/apps/org.remmina.Remmina.svg" ]; then
+          cp data/desktop/scalable/apps/org.remmina.Remmina.svg Multi-Remmina.app/Contents/Resources/AppIcon.svg
+        fi
+        
+        # Copy PNG icons as fallback
+        for size in 512x512 256x256 128x128; do
+          if [ -f "data/desktop/${size}/apps/org.multi-remmina.MultiRemmina.png" ]; then
+            cp "data/desktop/${size}/apps/org.multi-remmina.MultiRemmina.png" Multi-Remmina.app/Contents/Resources/
+          elif [ -f "data/desktop/${size}/apps/org.remmina.Remmina.png" ]; then
+            cp "data/desktop/${size}/apps/org.remmina.Remmina.png" Multi-Remmina.app/Contents/Resources/
+          fi
+        done
         
         # Bundle all Homebrew dependencies using dylibbundler
         brew install dylibbundler
@@ -220,8 +262,8 @@ jobs:
         # Remove quarantine attributes (helps with Gatekeeper)
         xattr -cr Multi-Remmina.app || true
         
-        # Create Info.plist
-        cat > Multi-Remmina.app/Contents/Info.plist << 'EOF'
+        # Create Info.plist with dynamic version
+        cat > Multi-Remmina.app/Contents/Info.plist << EOFPLIST
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0">
@@ -232,17 +274,21 @@ jobs:
             <string>org.multi-remmina.MultiRemmina</string>
             <key>CFBundleName</key>
             <string>Multi-Remmina</string>
+            <key>CFBundleDisplayName</key>
+            <string>Multi-Remmina</string>
             <key>CFBundleVersion</key>
-            <string>1.0.0</string>
+            <string>${{ steps.version.outputs.version }}</string>
             <key>CFBundleShortVersionString</key>
-            <string>1.0.0</string>
+            <string>${{ steps.version.outputs.version }}</string>
             <key>CFBundlePackageType</key>
             <string>APPL</string>
+            <key>CFBundleIconFile</key>
+            <string>org.multi-remmina.MultiRemmina</string>
             <key>NSHighResolutionCapable</key>
             <true/>
         </dict>
         </plist>
-        EOF
+        EOFPLIST
     
     - name: Create ZIP archive
       run: |
