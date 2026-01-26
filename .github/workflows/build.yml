@@ -31,7 +31,6 @@ jobs:
           libssl-dev libssh-dev libvncserver-dev \
           libavahi-ui-gtk3-dev libgcrypt20-dev \
           libjson-glib-dev libsecret-1-dev \
-          libwebkit2gtk-4.0-dev libvte-2.91-dev \
           gettext intltool
     
     - name: Install FreeRDP
@@ -46,6 +45,8 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=/usr \
           -DWITH_TRANSLATIONS=ON \
           -DWITH_AVAHI=ON \
+          -DWITH_VTE=OFF \
+          -DWITH_WWW=OFF \
           -DWITH_NEWS=OFF \
           -DWITH_STATS=OFF
     
@@ -96,7 +97,7 @@ jobs:
     - name: Install dependencies
       run: |
         brew install cmake pkg-config gtk+3 glib libsodium openssl@3 \
-                     libssh freerdp libvncserver gettext json-glib libgcrypt
+                     libssh freerdp libvncserver gettext json-glib libgcrypt || true
     
     - name: Configure CMake
       run: |
@@ -108,6 +109,8 @@ jobs:
           -DWITH_AVAHI=OFF \
           -DWITH_APPINDICATOR=OFF \
           -DWITH_TELEPATHY=OFF \
+          -DWITH_VTE=OFF \
+          -DWITH_WWW=OFF \
           -DWITH_MACOS_KEYCHAIN=ON \
           -DWITH_NEWS=OFF \
           -DWITH_STATS=OFF

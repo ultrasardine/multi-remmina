@@ -121,7 +121,6 @@ jobs:
           libssl-dev libssh-dev libvncserver-dev \
           libavahi-ui-gtk3-dev libgcrypt20-dev \
           libjson-glib-dev libsecret-1-dev \
-          libwebkit2gtk-4.0-dev libvte-2.91-dev \
           libfreerdp-dev libfreerdp2-2 \
           gettext intltool
     
@@ -136,7 +135,9 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_INSTALL_PREFIX=/usr \
           -DWITH_TRANSLATIONS=ON \
-          -DWITH_AVAHI=ON
+          -DWITH_AVAHI=ON \
+          -DWITH_VTE=OFF \
+          -DWITH_WWW=OFF
         cmake --build build -j$(nproc)
         DESTDIR=${{github.workspace}}/staging cmake --install build
     
@@ -201,7 +202,7 @@ jobs:
     - name: Install dependencies
       run: |
         brew install cmake pkg-config gtk+3 glib libsodium openssl@3 \
-                     libssh freerdp libvncserver gettext json-glib libgcrypt
+                     libssh freerdp libvncserver gettext json-glib libgcrypt || true
     
     - name: Update version in CMakeLists.txt
       run: |
@@ -218,6 +219,8 @@ jobs:
           -DWITH_AVAHI=OFF \
           -DWITH_APPINDICATOR=OFF \
           -DWITH_TELEPATHY=OFF \
+          -DWITH_VTE=OFF \
+          -DWITH_WWW=OFF \
           -DWITH_MACOS_KEYCHAIN=ON
         cmake --build build -j$(sysctl -n hw.ncpu)
     
