@@ -230,9 +230,10 @@ jobs:
     - name: Install dependencies
       run: |
         # Install core dependencies including protocol libraries
+        # Note: WebKitGTK is Linux-only, so WWW plugin won't work on macOS
         brew install cmake pkg-config gtk+3 glib libsodium openssl@3 \
                      libssh libvncserver gettext json-glib libgcrypt curl \
-                     freerdp spice-protocol spice-gtk webkitgtk || true
+                     freerdp spice-protocol spice-gtk || true
     
     - name: Configure CMake
       run: |
@@ -245,7 +246,7 @@ jobs:
           -DWITH_APPINDICATOR=OFF \
           -DWITH_TELEPATHY=OFF \
           -DWITH_VTE=OFF \
-          -DWITH_WWW=ON \
+          -DWITH_WWW=OFF \
           -DWITH_FREERDP=ON \
           -DWITH_SPICE=ON \
           -DWITH_X2GO=OFF \
