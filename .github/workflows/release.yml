@@ -104,7 +104,7 @@ jobs:
   build-linux-release:
     name: Build Linux Release
     needs: create-release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # Use Ubuntu 22.04 LTS for better package availability
     
     steps:
     - name: Checkout code
@@ -243,20 +243,33 @@ jobs:
     
     - name: Create application bundle
       run: |
+        # Find the actual binary location
+        BINARY_PATH=$(find build -name "multi-remmina" -type f -executable | head -1)
+        
+        if [ -z "$BINARY_PATH" ]; then
+          echo "Error: multi-remmina binary not found"
+          find build -name "multi-remmina" -o -name "remmina"
+          exit 1
+        fi
+        
+        echo "Found binary at: $BINARY_PATH"
+        
         # Create app bundle structure
         mkdir -p Multi-Remmina.app/Contents/{MacOS,Resources,Frameworks,lib}
         
         # Copy binary
-        cp build/src/multi-remmina Multi-Remmina.app/Contents/MacOS/
+        cp "$BINARY_PATH" Multi-Remmina.app/Contents/MacOS/multi-remmina
         
         # Copy plugins
         mkdir -p Multi-Remmina.app/Contents/lib/multi-remmina/plugins
-        cp -r build/plugins/*.so Multi-Remmina.app/Contents/lib/multi-remmina/plugins/ || true
+        find build -name "*.so" -o -name "*.dylib" | while read plugin; do
+          cp "$plugin" Multi-Remmina.app/Contents/lib/multi-remmina/plugins/ || true
+        done
         
         # Copy resources (icons, UI files, themes)
-        cp -r data/ui Multi-Remmina.app/Contents/Resources/ || true
-        cp -r data/theme Multi-Remmina.app/Contents/Resources/ || true
-        cp -r data/desktop/*.png Multi-Remmina.app/Contents/Resources/ || true
+        cp -r data/ui Multi-Remmina.app/Contents/Resources/ 2>/dev/null || true
+        cp -r data/theme Multi-Remmina.app/Contents/Resources/ 2>/dev/null || true
+        find data/desktop -name "*.png" -exec cp {} Multi-Remmina.app/Contents/Resources/ \; 2>/dev/null || true
         
         # Bundle all Homebrew dependencies using dylibbundler
         brew install dylibbundler
