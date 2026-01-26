@@ -35,8 +35,9 @@ jobs:
     
     - name: Install FreeRDP
       run: |
-        sudo apt-get install -y libfreerdp-dev libfreerdp2-2 \
-          libfreerdp-client2-2 libwinpr2-dev
+        # FreeRDP is not available in default repos, skip it for now
+        # RDP plugin will be disabled but other protocols will work
+        echo "Skipping FreeRDP installation - not available in Ubuntu default repos"
     
     - name: Configure CMake
       run: |
@@ -47,6 +48,7 @@ jobs:
           -DWITH_AVAHI=ON \
           -DWITH_VTE=OFF \
           -DWITH_WWW=OFF \
+          -DWITH_FREERDP=OFF \
           -DWITH_NEWS=OFF \
           -DWITH_STATS=OFF
     
@@ -96,8 +98,9 @@ jobs:
     
     - name: Install dependencies
       run: |
+        # Install core dependencies, skip FreeRDP (version mismatch)
         brew install cmake pkg-config gtk+3 glib libsodium openssl@3 \
-                     libssh freerdp libvncserver gettext json-glib libgcrypt || true
+                     libssh libvncserver gettext json-glib libgcrypt || true
     
     - name: Configure CMake
       run: |
@@ -111,6 +114,10 @@ jobs:
           -DWITH_TELEPATHY=OFF \
           -DWITH_VTE=OFF \
           -DWITH_WWW=OFF \
+          -DWITH_FREERDP=OFF \
+          -DWITH_SPICE=OFF \
+          -DWITH_X2GO=OFF \
+          -DWITH_PYTHONLIBS=OFF \
           -DWITH_MACOS_KEYCHAIN=ON \
           -DWITH_NEWS=OFF \
           -DWITH_STATS=OFF
