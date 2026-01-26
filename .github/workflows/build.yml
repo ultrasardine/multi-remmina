@@ -250,30 +250,30 @@ jobs:
         cp scripts/install-macos.sh .
         
         # Create README for the archive
-        cat > INSTALL.txt << 'EOF'
-Multi-Remmina for macOS - Installation Instructions
-====================================================
-
-QUICK INSTALL (Recommended):
-  1. Extract this ZIP file
-  2. Open Terminal in the extracted folder
-  3. Run: bash install-macos.sh
-
-MANUAL INSTALL:
-  1. Extract this ZIP file
-  2. Drag Multi-Remmina.app to /Applications
-  3. Open Terminal and run:
-     xattr -cr /Applications/Multi-Remmina.app
-  4. Launch Multi-Remmina from Applications
-
-WHY IS THIS NEEDED?
-This app is not code-signed with an Apple Developer certificate ($99/year).
-macOS Gatekeeper blocks unsigned apps by default.
-The installer script removes the quarantine flag automatically.
-
-SUPPORT:
-https://github.com/ultrasardine/multi-remmina
-EOF
+        cat > INSTALL.txt << 'EOFINSTALL'
+        Multi-Remmina for macOS - Installation Instructions
+        ====================================================
+        
+        QUICK INSTALL (Recommended):
+          1. Extract this ZIP file
+          2. Open Terminal in the extracted folder
+          3. Run: bash install-macos.sh
+        
+        MANUAL INSTALL:
+          1. Extract this ZIP file
+          2. Drag Multi-Remmina.app to /Applications
+          3. Open Terminal and run:
+             xattr -cr /Applications/Multi-Remmina.app
+          4. Launch Multi-Remmina from Applications
+        
+        WHY IS THIS NEEDED?
+        This app is not code-signed with an Apple Developer certificate.
+        macOS Gatekeeper blocks unsigned apps by default.
+        The installer script removes the quarantine flag automatically.
+        
+        SUPPORT:
+        https://github.com/ultrasardine/multi-remmina
+        EOFINSTALL
         
         # Create a clean directory for packaging
         mkdir -p Multi-Remmina-macOS
