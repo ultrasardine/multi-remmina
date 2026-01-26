@@ -296,6 +296,13 @@ jobs:
         name: multi-remmina-macos
         path: ./artifacts/macos
     
+    - name: List downloaded artifacts
+      run: |
+        echo "Linux artifacts:"
+        ls -lah ./artifacts/linux/ || echo "No Linux artifacts found"
+        echo "macOS artifacts:"
+        ls -lah ./artifacts/macos/ || echo "No macOS artifacts found"
+    
     - name: Generate release notes
       id: release_notes
       run: |
@@ -307,23 +314,33 @@ jobs:
         
         **Version**: ${{ steps.version.outputs.version }}  
         **Commit**: ${GITHUB_SHA}  
-        **Branch**: ${GITHUB_REF_NAME}
+        **Branch**: ${GITHUB_REF_NAME}  
+        **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
         
         ### ⚠️ Pre-Release Notice
         This is an automated development build from the latest master branch. It may contain bugs or incomplete features.
         
+        ### 📦 Downloads
+        
+        - **Linux**: Multi-Remmina-*.AppImage (self-contained, no installation needed)
+        - **macOS**: Multi-Remmina-macOS.dmg (drag to Applications folder)
+        
         ### Recent Changes
         ${COMMITS}
         
-        ### Installation
+        ### Installation Instructions
         
         #### Linux
-        - Download the AppImage and make it executable: \`chmod +x Multi-Remmina*.AppImage\`
-        - Run: \`./Multi-Remmina*.AppImage\`
+        \`\`\`bash
+        # Download the AppImage
+        chmod +x Multi-Remmina-*.AppImage
+        ./Multi-Remmina-*.AppImage
+        \`\`\`
         
         #### macOS
-        - Download the DMG file
-        - Open and drag Multi-Remmina.app to Applications
+        1. Download the DMG file
+        2. Open it and drag Multi-Remmina.app to Applications
+        3. Right-click and select "Open" on first launch (unsigned app)
         
         ---
         
@@ -348,6 +365,142 @@ jobs:
         body_path: release_notes.md
         draft: false
         prerelease: true
+        files: |
+          artifacts/linux/*
+          artifacts/macos/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  # Create automatic stable release on schedule or manual trigger
+  create-stable-release:
+    name: Create Stable Release
+    needs: [build-linux, build-macos]
+    runs-on: ubuntu-latest
+    # Only run on workflow_dispatch or when commit message contains [release]
+    if: |
+      github.event_name == 'workflow_dispatch' || 
+      (github.event_name == 'push' && 
+       github.ref == 'refs/heads/master' && 
+       contains(github.event.head_commit.message, '[release]'))
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Generate semantic version
+      id: version
+      run: |
+        # Use CalVer: YYYY.MM.PATCH (e.g., 2026.01.0)
+        YEAR=$(date +%Y)
+        MONTH=$(date +%-m)
+        
+        # Find the latest tag for this month
+        LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
+        
+        if [ -z "$LATEST_TAG" ]; then
+          # First release this month
+          PATCH=0
+        else
+          # Increment patch version
+          PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
+          PATCH=$((PATCH + 1))
+        fi
+        
+        VERSION="${YEAR}.${MONTH}.${PATCH}"
+        TAG="v${VERSION}"
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "Generated version: $VERSION (tag: $TAG)"
+    
+    - name: Download Linux artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: multi-remmina-linux-x86_64
+        path: ./artifacts/linux
+    
+    - name: Download macOS artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: multi-remmina-macos
+        path: ./artifacts/macos
+    
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        # Get commits since last release tag
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        
+        if [ -z "$LAST_TAG" ]; then
+          COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges | head -20)
+        else
+          COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+        fi
+        
+        cat > release_notes.md << EOF
+        ## Multi-Remmina v${{ steps.version.outputs.version }}
+        
+        **Release Date**: $(date -u +"%Y-%m-%d")  
+        **Commit**: ${GITHUB_SHA}
+        
+        ### 📦 Downloads
+        
+        - **Linux**: Multi-Remmina-*.AppImage (self-contained, no installation needed)
+        - **macOS**: Multi-Remmina-macOS.dmg (drag to Applications folder)
+        
+        ### What's New
+        
+        ${COMMITS}
+        
+        ### Installation Instructions
+        
+        #### Linux
+        \`\`\`bash
+        # Download the AppImage
+        chmod +x Multi-Remmina-*.AppImage
+        ./Multi-Remmina-*.AppImage
+        \`\`\`
+        
+        #### macOS
+        1. Download the DMG file
+        2. Open it and drag Multi-Remmina.app to Applications
+        3. Right-click and select "Open" on first launch (unsigned app)
+        
+        ### Supported Protocols
+        
+        - RDP (Remote Desktop Protocol)
+        - VNC (Virtual Network Computing)
+        - SSH (Secure Shell)
+        - SFTP (SSH File Transfer)
+        - SPICE
+        - X2Go
+        - WWW (HTTP)
+        - EXEC (Command execution)
+        
+        ---
+        
+        **Full Changelog**: https://github.com/${{ github.repository }}/compare/${LAST_TAG}...${{ steps.version.outputs.tag }}
+        EOF
+        
+        cat release_notes.md
+    
+    - name: Create git tag
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag -a ${{ steps.version.outputs.tag }} -m "Release ${{ steps.version.outputs.version }}"
+        git push origin ${{ steps.version.outputs.tag }}
+    
+    - name: Create stable release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.tag }}
+        name: "Multi-Remmina v${{ steps.version.outputs.version }}"
+        body_path: release_notes.md
+        draft: false
+        prerelease: false
         files: |
           artifacts/linux/*
           artifacts/macos/*
