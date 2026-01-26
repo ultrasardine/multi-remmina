@@ -646,6 +646,121 @@ remmina_component_action(RemminaComponent *component, const gchar *param)
 
 ---
 
+## Roadmap
+
+Multi-Remmina is actively developed with exciting features planned for future releases.
+
+### 🎯 Upcoming Features
+
+#### Platform Expansion
+- **Windows Support** (v2.0.0)
+  - Native Windows build using GTK3
+  - Windows Credential Manager integration
+  - Windows-specific optimizations
+  - MSI installer package
+  - Chocolatey package distribution
+
+#### Protocol Enhancements
+- **Enhanced RDP Support**
+  - RemoteFX support
+  - USB redirection
+  - Smart card authentication
+  - Audio input (microphone) support
+  - Multi-touch gesture support
+
+- **VNC Improvements**
+  - Clipboard synchronization enhancements
+  - Better scaling algorithms
+  - VNC over WebSocket support
+
+- **New Protocols**
+  - Apache Guacamole protocol support
+  - Parsec protocol integration
+  - Moonlight (NVIDIA GameStream) support
+
+#### User Experience
+- **Modern UI Refresh**
+  - GTK4 migration
+  - Libadwaita integration for GNOME
+  - Dark mode improvements
+  - Customizable toolbar
+  - Tabbed interface option
+
+- **Connection Management**
+  - Connection groups and folders
+  - Quick search and filtering
+  - Recent connections history
+  - Favorite connections
+  - Connection templates
+
+- **Session Features**
+  - Session recording and playback
+  - Screenshot annotations
+  - Connection performance monitoring
+  - Bandwidth usage statistics
+  - Connection quality indicators
+
+#### Security & Privacy
+- **Enhanced Security**
+  - Two-factor authentication support
+  - Certificate pinning
+  - Encrypted profile storage
+  - Audit logging
+  - Security policy enforcement
+
+- **Privacy Features**
+  - Incognito mode (no history)
+  - Automatic credential cleanup
+  - Secure clipboard handling
+  - Privacy-focused defaults
+
+#### Productivity
+- **Automation & Scripting**
+  - Python plugin API
+  - Command-line automation
+  - Batch connection management
+  - Custom keyboard macros
+  - Event-driven actions
+
+- **Integration**
+  - Browser extension for quick connect
+  - System tray quick actions
+  - Global hotkeys
+  - Cloud profile sync (optional)
+  - Integration with password managers (1Password, Bitwarden)
+
+#### Mobile & Embedded
+- **Mobile Companion App**
+  - iOS app for remote access
+  - Android app for remote access
+  - Mobile-optimized UI
+  - Touch gesture support
+
+- **Embedded Systems**
+  - Raspberry Pi optimization
+  - ARM architecture support
+  - Minimal resource mode
+  - Headless operation mode
+
+### 📅 Release Timeline
+
+| Version | Target | Focus |
+|---------|--------|-------|
+| 1.5.0 | Q2 2026 | GTK4 migration, UI improvements |
+| 1.6.0 | Q3 2026 | Enhanced RDP features, session recording |
+| 2.0.0 | Q4 2026 | Windows support, protocol additions |
+| 2.1.0 | Q1 2027 | Mobile apps, cloud sync |
+
+### 🤝 Community Requests
+
+We track community-requested features in our [GitHub Issues](https://github.com/ultrasardine/multi-remmina/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement). Vote on features you'd like to see by adding a 👍 reaction to the issue.
+
+### 💡 Suggest a Feature
+
+Have an idea? [Open a feature request](https://github.com/ultrasardine/multi-remmina/issues/new?template=feature_request.yml) and let us know!
+
+---
+
 ## CI/CD and Releases
 
 ### Automated Workflows
