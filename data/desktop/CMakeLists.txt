@@ -104,13 +104,13 @@ set(REMMINA_BINARY_PATH ${CMAKE_INSTALL_FULL_BINDIR}/remmina)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${REMMINA_APP_ID}.desktop.in
     ${CMAKE_CURRENT_BINARY_DIR}/${REMMINA_APP_ID}.desktop @ONLY)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/org.remmina.Remmina-file.desktop.in
-    ${CMAKE_CURRENT_BINARY_DIR}/org.remmina.Remmina-file.desktop @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/org.multi-remmina.MultiRemmina-file.desktop.in
+    ${CMAKE_CURRENT_BINARY_DIR}/org.multi-remmina.MultiRemmina-file.desktop @ONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/remmina-file-wrapper.in
     ${CMAKE_CURRENT_BINARY_DIR}/remmina-file-wrapper @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${REMMINA_APP_ID}.desktop
     DESTINATION "${REMMINA_DATADIR}/applications")
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.remmina.Remmina-file.desktop
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.multi-remmina.MultiRemmina-file.desktop
     DESTINATION "${REMMINA_DATADIR}/applications")
 install(FILES ${REMMINA_APP_ID}.appdata.xml
     DESTINATION "${REMMINA_DATADIR}/metainfo")
@@ -183,7 +183,7 @@ if(NOT APPLE)
     set( XDG_MIME_INSTALL_DIR "${REMMINA_DATADIR}/mime/packages" )
     find_package( SharedMimeInfo )
     if( SHARED_MIME_INFO_FOUND )
-        install( FILES org.remmina.Remmina-mime.xml DESTINATION ${XDG_MIME_INSTALL_DIR} )
+        install( FILES org.multi-remmina.MultiRemmina-mime.xml DESTINATION ${XDG_MIME_INSTALL_DIR} )
         update_xdg_mimetypes( ${XDG_MIME_INSTALL_DIR} )
     endif()
 endif()
