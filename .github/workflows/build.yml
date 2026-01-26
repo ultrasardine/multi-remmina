@@ -66,6 +66,32 @@ jobs:
     - name: Build
       run: cmake --build build --config ${{env.BUILD_TYPE}} -j$(nproc)
     
+    - name: Generate version
+      id: version
+      run: |
+        # Use CalVer: YYYY.M.PATCH (same as release job)
+        YEAR=$(date +%Y)
+        MONTH=$(date +%-m)
+        
+        # Find the latest tag for this month
+        LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
+        
+        if [ -z "$LATEST_TAG" ]; then
+          # First release this month
+          PATCH=0
+        else
+          # Increment patch version
+          PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
+          PATCH=$((PATCH + 1))
+        fi
+        
+        VERSION="${YEAR}.${MONTH}.${PATCH}"
+        SHORT_SHA=$(git rev-parse --short HEAD)
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+        echo "Generated version: $VERSION"
+    
     - name: Run tests
       working-directory: build
       run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure || true
@@ -104,11 +130,10 @@ jobs:
         
         # Check if AppImage was created (it may be named Remmina-*.AppImage or Multi-Remmina-*.AppImage)
         if ls *-x86_64.AppImage 1> /dev/null 2>&1; then
-          # Rename to Multi-Remmina if needed
+          # Rename to include version
+          VERSION="${{ steps.version.outputs.version }}"
           for file in *-x86_64.AppImage; do
-            if [[ "$file" != Multi-Remmina-* ]]; then
-              mv "$file" "Multi-Remmina-x86_64.AppImage"
-            fi
+            mv "$file" "Multi-Remmina-${VERSION}-x86_64.AppImage"
           done
           echo "AppImage created successfully:"
           ls -lh Multi-Remmina*.AppImage
