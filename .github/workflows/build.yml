@@ -35,6 +35,7 @@ jobs:
           libvte-2.91-dev \
           libwebkit2gtk-4.0-dev \
           libcurl4-openssl-dev \
+          libcups2-dev \
           freerdp2-dev libwinpr2-dev \
           gettext intltool
     
