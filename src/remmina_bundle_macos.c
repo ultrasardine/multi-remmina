@@ -103,11 +103,11 @@ gchar* remmina_get_plugin_dir(void)
 	if (!plugin_dir) {
 		gchar *bundle_path = remmina_get_bundle_resource_path();
 		if (bundle_path) {
-			plugin_dir = g_build_filename(bundle_path, "lib", "remmina", "plugins", NULL);
+			plugin_dir = g_build_filename(bundle_path, "lib", "multi-remmina", "plugins", NULL);
 			g_free(bundle_path);
 		} else {
 			/* Fallback to standard location if not in bundle */
-			plugin_dir = g_strdup("/usr/local/lib/remmina/plugins");
+			plugin_dir = g_strdup("/usr/local/lib/multi-remmina/plugins");
 		}
 	}
 

@@ -274,6 +274,7 @@ jobs:
         cp "$BINARY_PATH" Multi-Remmina.app/Contents/MacOS/multi-remmina
         
         # Copy plugins
+        # Note: Path changed from lib/remmina/plugins to lib/multi-remmina/plugins
         mkdir -p Multi-Remmina.app/Contents/lib/multi-remmina/plugins
         find build -name "*.so" -o -name "*.dylib" | while read plugin; do
           cp "$plugin" Multi-Remmina.app/Contents/lib/multi-remmina/plugins/ || true

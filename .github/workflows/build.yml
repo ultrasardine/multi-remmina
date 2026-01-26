@@ -314,11 +314,21 @@ jobs:
         cp "$BINARY_PATH" Multi-Remmina.app/Contents/MacOS/multi-remmina
         chmod +x Multi-Remmina.app/Contents/MacOS/multi-remmina
         
-        # Copy plugins
-        mkdir -p Multi-Remmina.app/Contents/lib/multi-remmina/plugins
-        find build -name "*.so" -o -name "*.dylib" | while read plugin; do
-          cp "$plugin" Multi-Remmina.app/Contents/lib/multi-remmina/plugins/ || true
+        # Copy plugins to the correct Multi-Remmina location
+        # Note: Path changed from lib/remmina/plugins to lib/multi-remmina/plugins
+        mkdir -p Multi-Remmina.app/Contents/Resources/lib/multi-remmina/plugins
+        
+        echo "Looking for plugin files..."
+        find build/plugins -name "*.so" -o -name "*.dylib" || echo "No plugins found"
+        
+        # Copy all plugin files
+        find build/plugins -type f \( -name "*.so" -o -name "*.dylib" \) | while read plugin; do
+          echo "Copying plugin: $plugin"
+          cp "$plugin" Multi-Remmina.app/Contents/Resources/lib/multi-remmina/plugins/ || true
         done
+        
+        echo "Plugins in app bundle:"
+        ls -la Multi-Remmina.app/Contents/Resources/lib/multi-remmina/plugins/
         
         # Copy resources (icons, UI files, themes)
         cp -r data/ui Multi-Remmina.app/Contents/Resources/ 2>/dev/null || true
