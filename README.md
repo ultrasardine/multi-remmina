@@ -646,6 +646,83 @@ remmina_component_action(RemminaComponent *component, const gchar *param)
 
 ---
 
+## CI/CD and Releases
+
+### Automated Workflows
+
+Multi-Remmina uses GitHub Actions for continuous integration and automated releases:
+
+#### Build Workflow
+- **Trigger**: Push to master/main, pull requests
+- **Platforms**: Linux (Ubuntu), macOS
+- **Outputs**: AppImage (Linux), DMG (macOS)
+- **Artifacts**: Available for 30 days
+
+#### Release Workflow
+- **Trigger**: Git tags (v*.*.*) or manual dispatch
+- **Actions**:
+  - Creates GitHub release with auto-generated notes
+  - Builds packages for all platforms
+  - Uploads release artifacts
+  - Updates CHANGELOG.md
+- **Artifacts**: AppImage, DMG, tarballs
+
+#### Version Management
+- **Semantic Versioning**: MAJOR.MINOR.PATCH (e.g., 1.4.41)
+- **Version Bump**: Manual workflow dispatch
+  - Choose: patch, minor, or major
+  - Automatically updates CMakeLists.txt
+  - Creates and pushes git tag
+  - Triggers release workflow
+
+### Creating a Release
+
+#### Option 1: Automated (Recommended)
+1. Go to Actions → Version Bump
+2. Click "Run workflow"
+3. Select bump type (patch/minor/major)
+4. Check "Create release after bump"
+5. Click "Run workflow"
+
+#### Option 2: Manual
+```bash
+# Update version in CMakeLists.txt
+sed -i 's/VERSION [0-9.]\+/VERSION 1.4.42/' CMakeLists.txt
+
+# Commit and tag
+git add CMakeLists.txt
+git commit -m "chore: bump version to 1.4.42"
+git tag -a v1.4.42 -m "Release v1.4.42"
+git push origin master --tags
+```
+
+### Conventional Commits
+
+We follow [Conventional Commits](https://www.conventionalcommits.org/) for clear version history:
+
+- `feat:` - New feature (minor version bump)
+- `fix:` - Bug fix (patch version bump)
+- `docs:` - Documentation changes
+- `style:` - Code style changes (formatting, etc.)
+- `refactor:` - Code refactoring
+- `perf:` - Performance improvements
+- `test:` - Adding or updating tests
+- `build:` - Build system changes
+- `ci:` - CI/CD changes
+- `chore:` - Other changes
+- `revert:` - Revert previous commit
+
+**Breaking changes**: Add `BREAKING CHANGE:` in commit body (major version bump)
+
+Example:
+```
+feat: add multi-monitor support for RDP
+
+Implements full multi-monitor spanning for RDP connections.
+
+BREAKING CHANGE: Changes RDP plugin API
+```
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.

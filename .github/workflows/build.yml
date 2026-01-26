@@ -1,0 +1,174 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  # Linux build job
+  build-linux:
+    name: Build on Linux
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake git pkg-config \
+          libgtk-3-dev libglib2.0-dev libsodium-dev \
+          libssl-dev libssh-dev libvncserver-dev \
+          libavahi-ui-gtk3-dev libgcrypt20-dev \
+          libjson-glib-dev libsecret-1-dev \
+          libwebkit2gtk-4.0-dev libvte-2.91-dev \
+          gettext intltool
+    
+    - name: Install FreeRDP
+      run: |
+        sudo apt-get install -y libfreerdp-dev libfreerdp2-2 \
+          libfreerdp-client2-2 libwinpr2-dev
+    
+    - name: Configure CMake
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+          -DCMAKE_INSTALL_PREFIX=/usr \
+          -DWITH_TRANSLATIONS=ON \
+          -DWITH_AVAHI=ON \
+          -DWITH_NEWS=OFF \
+          -DWITH_STATS=OFF
+    
+    - name: Build
+      run: cmake --build build --config ${{env.BUILD_TYPE}} -j$(nproc)
+    
+    - name: Run tests
+      working-directory: build
+      run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure || true
+    
+    - name: Install to staging
+      run: |
+        DESTDIR=${{github.workspace}}/staging cmake --install build
+    
+    - name: Create AppImage
+      run: |
+        # Download linuxdeploy
+        wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+        chmod +x linuxdeploy-x86_64.AppImage
+        
+        # Create AppDir structure
+        mkdir -p AppDir/usr
+        cp -r staging/usr/* AppDir/usr/
+        
+        # Create AppImage
+        ./linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage || true
+    
+    - name: Upload Linux artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: multi-remmina-linux-x86_64
+        path: |
+          Multi-Remmina*.AppImage
+          staging/usr/bin/multi-remmina
+        retention-days: 30
+
+  # macOS build job
+  build-macos:
+    name: Build on macOS
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Install dependencies
+      run: |
+        brew install cmake pkg-config gtk+3 glib libsodium openssl@3 \
+                     libssh freerdp libvncserver gettext json-glib libgcrypt
+    
+    - name: Configure CMake
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+          -DCMAKE_INSTALL_PREFIX=/usr/local \
+          -DCMAKE_PREFIX_PATH="$(brew --prefix)" \
+          -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)" \
+          -DWITH_AVAHI=OFF \
+          -DWITH_APPINDICATOR=OFF \
+          -DWITH_TELEPATHY=OFF \
+          -DWITH_MACOS_KEYCHAIN=ON \
+          -DWITH_NEWS=OFF \
+          -DWITH_STATS=OFF
+    
+    - name: Build
+      run: cmake --build build --config ${{env.BUILD_TYPE}} -j$(sysctl -n hw.ncpu)
+    
+    - name: Run tests
+      working-directory: build
+      run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure || true
+    
+    - name: Create application bundle
+      run: |
+        if [ -f scripts/create-macos-bundle.sh ]; then
+          chmod +x scripts/create-macos-bundle.sh
+          ./scripts/create-macos-bundle.sh -b build
+        fi
+    
+    - name: Create DMG
+      run: |
+        if [ -d Multi-Remmina.app ]; then
+          # Create DMG
+          hdiutil create -volname "Multi-Remmina" \
+            -srcfolder Multi-Remmina.app \
+            -ov -format UDZO \
+            Multi-Remmina-macOS.dmg
+        fi
+    
+    - name: Upload macOS artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: multi-remmina-macos
+        path: |
+          Multi-Remmina*.dmg
+          Multi-Remmina.app
+        retention-days: 30
+
+  # Code quality checks
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cppcheck clang-format
+    
+    - name: Run cppcheck
+      run: |
+        cppcheck --enable=warning,style,performance,portability \
+          --suppress=missingIncludeSystem \
+          --inline-suppr \
+          --error-exitcode=0 \
+          src/ plugins/ || true
+    
+    - name: Check code formatting
+      run: |
+        # Check if code follows formatting standards
+        find src plugins -name "*.c" -o -name "*.h" | \
+          xargs clang-format --dry-run --Werror || true

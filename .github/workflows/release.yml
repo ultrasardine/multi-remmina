@@ -1,0 +1,309 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.4.42)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # Create release with semantic versioning
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Get version
+      id: get_version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION=${GITHUB_REF#refs/tags/v}
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+    
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        # Get the previous tag
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        
+        if [ -z "$PREV_TAG" ]; then
+          # First release - get all commits
+          COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
+        else
+          # Get commits since last tag
+          COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+        fi
+        
+        # Create release notes
+        cat > release_notes.md << EOF
+        ## Multi-Remmina v${{ steps.get_version.outputs.version }}
+        
+        ### What's Changed
+        
+        ${COMMITS}
+        
+        ### Installation
+        
+        #### Linux
+        - Download the AppImage and make it executable
+        - Or use your distribution's package manager
+        
+        #### macOS
+        - Download the DMG file
+        - Open and drag Multi-Remmina.app to Applications
+        
+        #### FreeBSD
+        - Build from source (see README.md)
+        
+        ### Full Changelog
+        
+        See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md) for complete details.
+        
+        ---
+        
+        **Note**: This is a multiplatform port of Remmina. See the [original project](https://gitlab.com/Remmina/Remmina) for the Linux-focused version.
+        EOF
+        
+        cat release_notes.md
+    
+    - name: Create GitHub Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.get_version.outputs.version }}
+        name: Multi-Remmina v${{ steps.get_version.outputs.version }}
+        body_path: release_notes.md
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build Linux packages
+  build-linux-release:
+    name: Build Linux Release
+    needs: create-release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake git pkg-config \
+          libgtk-3-dev libglib2.0-dev libsodium-dev \
+          libssl-dev libssh-dev libvncserver-dev \
+          libavahi-ui-gtk3-dev libgcrypt20-dev \
+          libjson-glib-dev libsecret-1-dev \
+          libwebkit2gtk-4.0-dev libvte-2.91-dev \
+          libfreerdp-dev libfreerdp2-2 \
+          gettext intltool
+    
+    - name: Update version in CMakeLists.txt
+      run: |
+        VERSION="${{ needs.create-release.outputs.version }}"
+        sed -i "s/VERSION [0-9]\+\.[0-9]\+\.[0-9]\+/VERSION $VERSION/" CMakeLists.txt
+    
+    - name: Configure and build
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=/usr \
+          -DWITH_TRANSLATIONS=ON \
+          -DWITH_AVAHI=ON
+        cmake --build build -j$(nproc)
+        DESTDIR=${{github.workspace}}/staging cmake --install build
+    
+    - name: Create AppImage
+      run: |
+        # Download linuxdeploy
+        wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+        chmod +x linuxdeploy-x86_64.AppImage
+        
+        # Create AppDir
+        mkdir -p AppDir/usr
+        cp -r staging/usr/* AppDir/usr/
+        
+        # Create desktop file if not exists
+        mkdir -p AppDir/usr/share/applications
+        if [ ! -f AppDir/usr/share/applications/*.desktop ]; then
+          cat > AppDir/usr/share/applications/multi-remmina.desktop << 'EOF'
+        [Desktop Entry]
+        Name=Multi-Remmina
+        Comment=Multiplatform Remote Desktop Client
+        Exec=multi-remmina
+        Icon=multi-remmina
+        Type=Application
+        Categories=Network;RemoteAccess;
+        EOF
+        fi
+        
+        # Create AppImage
+        VERSION="${{ needs.create-release.outputs.version }}" \
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage
+        
+        # Rename AppImage
+        mv Multi-Remmina*.AppImage Multi-Remmina-${{ needs.create-release.outputs.version }}-x86_64.AppImage || true
+    
+    - name: Create tarball
+      run: |
+        cd staging
+        tar czf ../Multi-Remmina-${{ needs.create-release.outputs.version }}-linux-x86_64.tar.gz usr/
+    
+    - name: Upload AppImage to release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ needs.create-release.outputs.version }}
+        files: |
+          Multi-Remmina-*.AppImage
+          Multi-Remmina-*.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build macOS packages
+  build-macos-release:
+    name: Build macOS Release
+    needs: create-release
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Install dependencies
+      run: |
+        brew install cmake pkg-config gtk+3 glib libsodium openssl@3 \
+                     libssh freerdp libvncserver gettext json-glib libgcrypt
+    
+    - name: Update version in CMakeLists.txt
+      run: |
+        VERSION="${{ needs.create-release.outputs.version }}"
+        sed -i '' "s/VERSION [0-9]\+\.[0-9]\+\.[0-9]\+/VERSION $VERSION/" CMakeLists.txt
+    
+    - name: Configure and build
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=/usr/local \
+          -DCMAKE_PREFIX_PATH="$(brew --prefix)" \
+          -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)" \
+          -DWITH_AVAHI=OFF \
+          -DWITH_APPINDICATOR=OFF \
+          -DWITH_TELEPATHY=OFF \
+          -DWITH_MACOS_KEYCHAIN=ON
+        cmake --build build -j$(sysctl -n hw.ncpu)
+    
+    - name: Create application bundle
+      run: |
+        if [ -f scripts/create-macos-bundle.sh ]; then
+          chmod +x scripts/create-macos-bundle.sh
+          ./scripts/create-macos-bundle.sh -b build -v ${{ needs.create-release.outputs.version }}
+        fi
+    
+    - name: Sign application (if certificates available)
+      run: |
+        # Placeholder for code signing
+        # This would require Apple Developer certificates
+        echo "Code signing skipped (requires certificates)"
+    
+    - name: Create DMG
+      run: |
+        if [ -d Multi-Remmina.app ]; then
+          hdiutil create -volname "Multi-Remmina ${{ needs.create-release.outputs.version }}" \
+            -srcfolder Multi-Remmina.app \
+            -ov -format UDZO \
+            Multi-Remmina-${{ needs.create-release.outputs.version }}-macOS.dmg
+        fi
+    
+    - name: Create ZIP archive
+      run: |
+        if [ -d Multi-Remmina.app ]; then
+          zip -r Multi-Remmina-${{ needs.create-release.outputs.version }}-macOS.zip Multi-Remmina.app
+        fi
+    
+    - name: Upload macOS packages to release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ needs.create-release.outputs.version }}
+        files: |
+          Multi-Remmina-*.dmg
+          Multi-Remmina-*.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Update changelog
+  update-changelog:
+    name: Update Changelog
+    needs: [create-release, build-linux-release, build-macos-release]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Update CHANGELOG.md
+      run: |
+        VERSION="${{ needs.create-release.outputs.version }}"
+        DATE=$(date +%Y-%m-%d)
+        
+        # Get commits since last tag
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -z "$PREV_TAG" ]; then
+          COMMITS=$(git log --pretty=format:"- %s" --no-merges)
+        else
+          COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s" --no-merges)
+        fi
+        
+        # Prepend to CHANGELOG.md
+        cat > CHANGELOG.tmp << EOF
+        # Changelog
+        
+        ## [${VERSION}] - ${DATE}
+        
+        ### Added
+        ${COMMITS}
+        
+        EOF
+        
+        # Append existing changelog (skip first line if it's "# Changelog")
+        tail -n +2 CHANGELOG.md >> CHANGELOG.tmp || true
+        mv CHANGELOG.tmp CHANGELOG.md
+    
+    - name: Commit changelog
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add CHANGELOG.md
+        git commit -m "docs: update changelog for v${{ needs.create-release.outputs.version }}" || true
+        git push origin HEAD:master || true

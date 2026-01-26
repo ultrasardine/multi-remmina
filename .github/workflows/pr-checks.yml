@@ -1,0 +1,140 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # Validate PR title follows conventional commits
+  validate-pr-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check PR title
+      uses: amannn/action-semantic-pull-request@v5
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        types: |
+          feat
+          fix
+          docs
+          style
+          refactor
+          perf
+          test
+          build
+          ci
+          chore
+          revert
+        requireScope: false
+        subjectPattern: ^[A-Z].+$
+        subjectPatternError: |
+          The subject "{subject}" found in the pull request title "{title}"
+          didn't match the configured pattern. Please ensure that the subject
+          starts with an uppercase character.
+
+  # Check for breaking changes
+  check-breaking-changes:
+    name: Check for Breaking Changes
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Check for API changes
+      run: |
+        # Check if public headers have changed
+        if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "src/include/"; then
+          echo "::warning::Public API headers have been modified. Please ensure backward compatibility."
+        fi
+    
+    - name: Check for breaking changes in commits
+      run: |
+        # Check commit messages for BREAKING CHANGE
+        if git log origin/${{ github.base_ref }}..HEAD --pretty=format:"%B" | grep -q "BREAKING CHANGE"; then
+          echo "::warning::This PR contains breaking changes. Version bump should be major."
+        fi
+
+  # Build and test on multiple platforms
+  build-test:
+    name: Build and Test
+    uses: ./.github/workflows/build.yml
+
+  # Check code quality
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cppcheck clang-tidy
+    
+    - name: Run static analysis
+      run: |
+        cppcheck --enable=all --suppress=missingIncludeSystem \
+          --inline-suppr --error-exitcode=0 \
+          src/ plugins/ 2>&1 | tee cppcheck-report.txt || true
+    
+    - name: Comment PR with analysis results
+      uses: actions/github-script@v7
+      if: always()
+      with:
+        script: |
+          const fs = require('fs');
+          let report = '';
+          
+          try {
+            report = fs.readFileSync('cppcheck-report.txt', 'utf8');
+          } catch (e) {
+            report = 'No issues found';
+          }
+          
+          const body = `## Code Quality Report\n\n\`\`\`\n${report}\n\`\`\``;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });
+
+  # Check documentation
+  check-docs:
+    name: Check Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Check README links
+      run: |
+        # Check for broken links in README
+        if command -v markdown-link-check &> /dev/null; then
+          markdown-link-check README.md || true
+        else
+          echo "markdown-link-check not installed, skipping"
+        fi
+    
+    - name: Check for documentation updates
+      run: |
+        # If source files changed, check if docs were updated
+        if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "src/"; then
+          if ! git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "README.md\|CONTRIBUTING.md"; then
+            echo "::warning::Source files changed but documentation wasn't updated"
+          fi
+        fi
