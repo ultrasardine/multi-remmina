@@ -46,6 +46,8 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=/usr \
           -DWITH_TRANSLATIONS=ON \
           -DWITH_AVAHI=ON \
+          -DWITH_APPINDICATOR=OFF \
+          -DHAVE_LIBAPPINDICATOR=OFF \
           -DWITH_VTE=OFF \
           -DWITH_WWW=OFF \
           -DWITH_FREERDP=OFF \
