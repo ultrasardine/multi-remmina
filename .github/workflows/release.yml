@@ -3,13 +3,18 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*.*.*'  # Triggers on semantic version tags like v1.0.0, v1.2.3, etc.
   workflow_dispatch:
     inputs:
       version:
         description: 'Version to release (e.g., 1.4.42)'
         required: true
         type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
