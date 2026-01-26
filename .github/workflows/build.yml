@@ -261,9 +261,9 @@ jobs:
         find src plugins -name "*.c" -o -name "*.h" | \
           xargs clang-format --dry-run --Werror || true
 
-  # Create automatic pre-release on successful master builds
-  create-prerelease:
-    name: Create Pre-Release
+  # Create automatic stable release on every master push
+  create-release:
+    name: Create Release
     needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -274,125 +274,10 @@ jobs:
       with:
         fetch-depth: 0
     
-    - name: Generate version
-      id: version
-      run: |
-        # Generate version based on commit count and short SHA
-        COMMIT_COUNT=$(git rev-list --count HEAD)
-        SHORT_SHA=$(git rev-parse --short HEAD)
-        VERSION="0.0.${COMMIT_COUNT}-dev+${SHORT_SHA}"
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Generated version: $VERSION"
-    
-    - name: Download Linux artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: multi-remmina-linux-x86_64
-        path: ./artifacts/linux
-    
-    - name: Download macOS artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: multi-remmina-macos
-        path: ./artifacts/macos
-    
-    - name: List downloaded artifacts
-      run: |
-        echo "Linux artifacts:"
-        ls -lah ./artifacts/linux/ || echo "No Linux artifacts found"
-        echo "macOS artifacts:"
-        ls -lah ./artifacts/macos/ || echo "No macOS artifacts found"
-    
-    - name: Generate release notes
-      id: release_notes
-      run: |
-        # Get the last 10 commits
-        COMMITS=$(git log -10 --pretty=format:"- %s (%h)" --no-merges)
-        
-        cat > release_notes.md << EOF
-        ## Multi-Remmina Development Build
-        
-        **Version**: ${{ steps.version.outputs.version }}  
-        **Commit**: ${GITHUB_SHA}  
-        **Branch**: ${GITHUB_REF_NAME}  
-        **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-        
-        ### ⚠️ Pre-Release Notice
-        This is an automated development build from the latest master branch. It may contain bugs or incomplete features.
-        
-        ### 📦 Downloads
-        
-        - **Linux**: Multi-Remmina-*.AppImage (self-contained, no installation needed)
-        - **macOS**: Multi-Remmina-macOS.dmg (drag to Applications folder)
-        
-        ### Recent Changes
-        ${COMMITS}
-        
-        ### Installation Instructions
-        
-        #### Linux
-        \`\`\`bash
-        # Download the AppImage
-        chmod +x Multi-Remmina-*.AppImage
-        ./Multi-Remmina-*.AppImage
-        \`\`\`
-        
-        #### macOS
-        1. Download the DMG file
-        2. Open it and drag Multi-Remmina.app to Applications
-        3. Right-click and select "Open" on first launch (unsigned app)
-        
-        ---
-        
-        **Note**: For stable releases, see [tagged releases](https://github.com/${{ github.repository }}/releases?q=tag%3Av).
-        EOF
-        
-        cat release_notes.md
-    
-    - name: Delete old pre-release
-      run: |
-        # Delete the 'latest' pre-release if it exists
-        gh release delete latest --yes || true
-        git push origin :refs/tags/latest || true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Create or update pre-release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: latest
-        name: "Development Build (latest)"
-        body_path: release_notes.md
-        draft: false
-        prerelease: true
-        files: |
-          artifacts/linux/*
-          artifacts/macos/*
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  
-  # Create automatic stable release on schedule or manual trigger
-  create-stable-release:
-    name: Create Stable Release
-    needs: [build-linux, build-macos]
-    runs-on: ubuntu-latest
-    # Only run on workflow_dispatch or when commit message contains [release]
-    if: |
-      github.event_name == 'workflow_dispatch' || 
-      (github.event_name == 'push' && 
-       github.ref == 'refs/heads/master' && 
-       contains(github.event.head_commit.message, '[release]'))
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
     - name: Generate semantic version
       id: version
       run: |
-        # Use CalVer: YYYY.MM.PATCH (e.g., 2026.01.0)
+        # Use CalVer: YYYY.MM.PATCH (e.g., 2026.1.0)
         YEAR=$(date +%Y)
         MONTH=$(date +%-m)
         
@@ -426,6 +311,13 @@ jobs:
       with:
         name: multi-remmina-macos
         path: ./artifacts/macos
+    
+    - name: List downloaded artifacts
+      run: |
+        echo "Linux artifacts:"
+        ls -lah ./artifacts/linux/ || echo "No Linux artifacts found"
+        echo "macOS artifacts:"
+        ls -lah ./artifacts/macos/ || echo "No macOS artifacts found"
     
     - name: Generate release notes
       id: release_notes
@@ -493,7 +385,7 @@ jobs:
         git tag -a ${{ steps.version.outputs.tag }} -m "Release ${{ steps.version.outputs.version }}"
         git push origin ${{ steps.version.outputs.tag }}
     
-    - name: Create stable release
+    - name: Create release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.version.outputs.tag }}
