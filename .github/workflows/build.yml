@@ -194,6 +194,7 @@ jobs:
         
         # Copy binary
         cp "$BINARY_PATH" Multi-Remmina.app/Contents/MacOS/multi-remmina
+        chmod +x Multi-Remmina.app/Contents/MacOS/multi-remmina
         
         # Copy plugins
         mkdir -p Multi-Remmina.app/Contents/lib/multi-remmina/plugins
@@ -215,6 +216,9 @@ jobs:
           -d Multi-Remmina.app/Contents/Frameworks \
           -p @executable_path/../Frameworks \
           || echo "dylibbundler completed with warnings"
+        
+        # Remove quarantine attributes (helps with Gatekeeper)
+        xattr -cr Multi-Remmina.app || true
         
         # Create Info.plist
         cat > Multi-Remmina.app/Contents/Info.plist << 'EOF'
@@ -369,7 +373,7 @@ jobs:
         
         ### 📦 Downloads
         
-        - **Linux**: Multi-Remmina-*.AppImage (self-contained, no installation needed)
+        - **Linux**: Multi-Remmina-x86_64.AppImage (self-contained, no installation needed)
         - **macOS**: Multi-Remmina-macOS.dmg (drag to Applications folder)
         
         ### What's New
@@ -381,14 +385,31 @@ jobs:
         #### Linux
         \`\`\`bash
         # Download the AppImage
-        chmod +x Multi-Remmina-*.AppImage
-        ./Multi-Remmina-*.AppImage
+        chmod +x Multi-Remmina-x86_64.AppImage
+        ./Multi-Remmina-x86_64.AppImage
         \`\`\`
         
-        #### macOS
+        #### macOS (IMPORTANT - Read This!)
+        
+        **The app is NOT code-signed. macOS will show a "damaged" error. This is normal for unsigned apps.**
+        
+        **Method 1 - Remove Quarantine (Recommended):**
+        \`\`\`bash
+        # After downloading, open Terminal and run:
+        xattr -cr /Applications/Multi-Remmina.app
+        \`\`\`
+        
+        **Method 2 - Right-Click Open:**
         1. Download the DMG file
         2. Open it and drag Multi-Remmina.app to Applications
-        3. Right-click and select "Open" on first launch (unsigned app)
+        3. **Right-click** (or Control+click) on Multi-Remmina.app
+        4. Select "Open" from the menu
+        5. Click "Open" in the security dialog
+        
+        **Method 3 - System Settings:**
+        1. Try to open the app normally (it will fail)
+        2. Go to System Settings → Privacy & Security
+        3. Scroll down and click "Open Anyway" next to Multi-Remmina
         
         ### Supported Protocols
         
