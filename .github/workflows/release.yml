@@ -121,6 +121,10 @@ jobs:
           libssl-dev libssh-dev libvncserver-dev \
           libavahi-ui-gtk3-dev libgcrypt20-dev \
           libjson-glib-dev libsecret-1-dev \
+          libayatana-appindicator3-dev \
+          libvte-2.91-dev \
+          libwebkit2gtk-4.0-dev \
+          freerdp2-dev libwinpr2-dev \
           gettext intltool
     
     - name: Update version in CMakeLists.txt
@@ -135,19 +139,19 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=/usr \
           -DWITH_TRANSLATIONS=ON \
           -DWITH_AVAHI=ON \
-          -DWITH_APPINDICATOR=OFF \
-          -DHAVE_LIBAPPINDICATOR=OFF \
-          -DWITH_VTE=OFF \
-          -DWITH_WWW=OFF \
-          -DWITH_FREERDP=OFF
+          -DWITH_APPINDICATOR=ON \
+          -DWITH_VTE=ON \
+          -DWITH_WWW=ON \
+          -DWITH_FREERDP=ON
         cmake --build build -j$(nproc)
         DESTDIR=${{github.workspace}}/staging cmake --install build
     
     - name: Create AppImage
       run: |
-        # Download linuxdeploy
+        # Download linuxdeploy and GTK plugin
         wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-        chmod +x linuxdeploy-x86_64.AppImage
+        wget -q https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
+        chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh
         
         # Create AppDir
         mkdir -p AppDir/usr
@@ -167,9 +171,16 @@ jobs:
         EOF
         fi
         
-        # Create AppImage
+        # Bundle all dependencies including GTK, FreeRDP, VNC, etc.
+        export DEPLOY_GTK_VERSION=3
+        export LINUXDEPLOY_PLUGIN_GTK_DEPLOY_GLIB_SCHEMAS=1
+        
+        # Create self-contained AppImage
         VERSION="${{ needs.create-release.outputs.version }}" \
-          ./linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage
+          ./linuxdeploy-x86_64.AppImage \
+          --appdir AppDir \
+          --plugin gtk \
+          --output appimage
         
         # Rename AppImage
         mv Multi-Remmina*.AppImage Multi-Remmina-${{ needs.create-release.outputs.version }}-x86_64.AppImage || true
@@ -232,10 +243,54 @@ jobs:
     
     - name: Create application bundle
       run: |
-        if [ -f scripts/create-macos-bundle.sh ]; then
-          chmod +x scripts/create-macos-bundle.sh
-          ./scripts/create-macos-bundle.sh -b build -v ${{ needs.create-release.outputs.version }}
-        fi
+        # Create app bundle structure
+        mkdir -p Multi-Remmina.app/Contents/{MacOS,Resources,Frameworks,lib}
+        
+        # Copy binary
+        cp build/src/multi-remmina Multi-Remmina.app/Contents/MacOS/
+        
+        # Copy plugins
+        mkdir -p Multi-Remmina.app/Contents/lib/multi-remmina/plugins
+        cp -r build/plugins/*.so Multi-Remmina.app/Contents/lib/multi-remmina/plugins/ || true
+        
+        # Copy resources (icons, UI files, themes)
+        cp -r data/ui Multi-Remmina.app/Contents/Resources/ || true
+        cp -r data/theme Multi-Remmina.app/Contents/Resources/ || true
+        cp -r data/desktop/*.png Multi-Remmina.app/Contents/Resources/ || true
+        
+        # Bundle all Homebrew dependencies using dylibbundler
+        brew install dylibbundler
+        
+        # Bundle dependencies into Frameworks
+        dylibbundler -od -b \
+          -x Multi-Remmina.app/Contents/MacOS/multi-remmina \
+          -d Multi-Remmina.app/Contents/Frameworks \
+          -p @executable_path/../Frameworks \
+          || echo "dylibbundler completed with warnings"
+        
+        # Create Info.plist with version
+        cat > Multi-Remmina.app/Contents/Info.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleExecutable</key>
+            <string>multi-remmina</string>
+            <key>CFBundleIdentifier</key>
+            <string>org.multi-remmina.MultiRemmina</string>
+            <key>CFBundleName</key>
+            <string>Multi-Remmina</string>
+            <key>CFBundleVersion</key>
+            <string>${{ needs.create-release.outputs.version }}</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${{ needs.create-release.outputs.version }}</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+        </dict>
+        </plist>
+        EOF
     
     - name: Sign application (if certificates available)
       run: |
@@ -245,18 +300,15 @@ jobs:
     
     - name: Create DMG
       run: |
-        if [ -d Multi-Remmina.app ]; then
-          hdiutil create -volname "Multi-Remmina ${{ needs.create-release.outputs.version }}" \
-            -srcfolder Multi-Remmina.app \
-            -ov -format UDZO \
-            Multi-Remmina-${{ needs.create-release.outputs.version }}-macOS.dmg
-        fi
+        # Create a self-contained DMG
+        hdiutil create -volname "Multi-Remmina ${{ needs.create-release.outputs.version }}" \
+          -srcfolder Multi-Remmina.app \
+          -ov -format UDZO \
+          Multi-Remmina-${{ needs.create-release.outputs.version }}-macOS.dmg
     
     - name: Create ZIP archive
       run: |
-        if [ -d Multi-Remmina.app ]; then
-          zip -r Multi-Remmina-${{ needs.create-release.outputs.version }}-macOS.zip Multi-Remmina.app
-        fi
+        zip -r Multi-Remmina-${{ needs.create-release.outputs.version }}-macOS.zip Multi-Remmina.app
     
     - name: Upload macOS packages to release
       uses: softprops/action-gh-release@v1
