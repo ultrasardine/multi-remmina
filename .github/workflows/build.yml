@@ -322,22 +322,25 @@ jobs:
         cp -r data/ui Multi-Remmina.app/Contents/Resources/ 2>/dev/null || true
         cp -r data/theme Multi-Remmina.app/Contents/Resources/ 2>/dev/null || true
         
-        # Copy app icon (convert SVG to ICNS for macOS)
-        # First try to find and copy the SVG icon
-        if [ -f "data/desktop/scalable/apps/org.multi-remmina.MultiRemmina.svg" ]; then
-          cp data/desktop/scalable/apps/org.multi-remmina.MultiRemmina.svg Multi-Remmina.app/Contents/Resources/
-        elif [ -f "data/desktop/scalable/apps/org.remmina.Remmina.svg" ]; then
-          cp data/desktop/scalable/apps/org.remmina.Remmina.svg Multi-Remmina.app/Contents/Resources/AppIcon.svg
-        fi
+        # Create proper macOS .icns icon file
+        mkdir -p AppIcon.iconset
         
-        # Copy PNG icons as fallback
-        for size in 512x512 256x256 128x128; do
-          if [ -f "data/desktop/${size}/apps/org.multi-remmina.MultiRemmina.png" ]; then
-            cp "data/desktop/${size}/apps/org.multi-remmina.MultiRemmina.png" Multi-Remmina.app/Contents/Resources/
-          elif [ -f "data/desktop/${size}/apps/org.remmina.Remmina.png" ]; then
-            cp "data/desktop/${size}/apps/org.remmina.Remmina.png" Multi-Remmina.app/Contents/Resources/
-          fi
-        done
+        # Copy PNG icons at required sizes for .icns
+        cp data/desktop/16x16/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_16x16.png
+        cp data/desktop/32x32/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_16x16@2x.png
+        cp data/desktop/32x32/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_32x32.png
+        cp data/desktop/64x64/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_32x32@2x.png
+        cp data/desktop/128x128/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_128x128.png
+        cp data/desktop/256x256/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_128x128@2x.png
+        cp data/desktop/256x256/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_256x256.png
+        cp data/desktop/512x512/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_256x256@2x.png
+        cp data/desktop/512x512/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_512x512.png
+        
+        # Convert to .icns
+        iconutil -c icns AppIcon.iconset -o Multi-Remmina.app/Contents/Resources/AppIcon.icns
+        
+        echo "Icon created successfully:"
+        ls -lh Multi-Remmina.app/Contents/Resources/AppIcon.icns
         
         # Bundle all Homebrew dependencies using dylibbundler
         brew install dylibbundler
@@ -373,7 +376,7 @@ jobs:
             <key>CFBundlePackageType</key>
             <string>APPL</string>
             <key>CFBundleIconFile</key>
-            <string>org.multi-remmina.MultiRemmina</string>
+            <string>AppIcon</string>
             <key>NSHighResolutionCapable</key>
             <true/>
         </dict>
