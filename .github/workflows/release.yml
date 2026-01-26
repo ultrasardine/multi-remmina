@@ -124,6 +124,7 @@ jobs:
           libayatana-appindicator3-dev \
           libvte-2.91-dev \
           libwebkit2gtk-4.0-dev \
+          libcurl4-openssl-dev \
           freerdp2-dev libwinpr2-dev \
           gettext intltool
     
@@ -215,7 +216,7 @@ jobs:
     - name: Install dependencies
       run: |
         brew install cmake pkg-config gtk+3 glib libsodium openssl@3 \
-                     libssh libvncserver gettext json-glib libgcrypt || true
+                     libssh libvncserver gettext json-glib libgcrypt curl || true
     
     - name: Update version in CMakeLists.txt
       run: |
@@ -243,12 +244,18 @@ jobs:
     
     - name: Create application bundle
       run: |
-        # Find the actual binary location
-        BINARY_PATH=$(find build -name "multi-remmina" -type f -executable | head -1)
+        # Find the actual binary location (macOS doesn't support -executable flag)
+        BINARY_PATH=$(find build/src -name "multi-remmina" -type f | head -1)
+        
+        if [ -z "$BINARY_PATH" ]; then
+          # Try alternative name
+          BINARY_PATH=$(find build/src -name "remmina" -type f | head -1)
+        fi
         
         if [ -z "$BINARY_PATH" ]; then
           echo "Error: multi-remmina binary not found"
-          find build -name "multi-remmina" -o -name "remmina"
+          echo "Contents of build/src:"
+          ls -la build/src/ || true
           exit 1
         fi
         
