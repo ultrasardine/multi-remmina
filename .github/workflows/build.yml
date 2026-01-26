@@ -73,6 +73,13 @@ jobs:
     - name: Install to staging
       run: |
         DESTDIR=${{github.workspace}}/staging cmake --install build
+      continue-on-error: false
+    
+    - name: Verify installation
+      run: |
+        echo "Checking staging directory:"
+        ls -la ${{github.workspace}}/staging/usr/ || echo "Staging directory not found"
+        find ${{github.workspace}}/staging -name "multi-remmina" -o -name "remmina" || echo "Binary not found"
     
     - name: Create AppImage
       run: |
@@ -93,7 +100,16 @@ jobs:
         ./linuxdeploy-x86_64.AppImage \
           --appdir AppDir \
           --plugin gtk \
-          --output appimage || true
+          --output appimage || echo "AppImage creation had warnings"
+        
+        # Check if AppImage was created
+        if ls Multi-Remmina*.AppImage 1> /dev/null 2>&1; then
+          echo "AppImage created successfully"
+          ls -lh Multi-Remmina*.AppImage
+        else
+          echo "ERROR: AppImage was not created"
+          exit 1
+        fi
     
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v4
@@ -266,7 +282,12 @@ jobs:
     name: Create Release
     needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    # Only run if both builds succeeded
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/master' &&
+      needs.build-linux.result == 'success' &&
+      needs.build-macos.result == 'success'
     
     steps:
     - name: Checkout code
@@ -305,12 +326,14 @@ jobs:
       with:
         name: multi-remmina-linux-x86_64
         path: ./artifacts/linux
+      continue-on-error: true
     
     - name: Download macOS artifacts
       uses: actions/download-artifact@v4
       with:
         name: multi-remmina-macos
         path: ./artifacts/macos
+      continue-on-error: true
     
     - name: List downloaded artifacts
       run: |
