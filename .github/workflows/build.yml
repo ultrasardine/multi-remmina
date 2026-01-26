@@ -244,11 +244,49 @@ jobs:
         </plist>
         EOF
     
-    - name: Create DMG
+    - name: Create ZIP archive
       run: |
-        # Create a DMG with the app bundle
+        # Copy installer script
+        cp scripts/install-macos.sh .
+        
+        # Create README for the archive
+        cat > INSTALL.txt << 'EOF'
+Multi-Remmina for macOS - Installation Instructions
+====================================================
+
+QUICK INSTALL (Recommended):
+  1. Extract this ZIP file
+  2. Open Terminal in the extracted folder
+  3. Run: bash install-macos.sh
+
+MANUAL INSTALL:
+  1. Extract this ZIP file
+  2. Drag Multi-Remmina.app to /Applications
+  3. Open Terminal and run:
+     xattr -cr /Applications/Multi-Remmina.app
+  4. Launch Multi-Remmina from Applications
+
+WHY IS THIS NEEDED?
+This app is not code-signed with an Apple Developer certificate ($99/year).
+macOS Gatekeeper blocks unsigned apps by default.
+The installer script removes the quarantine flag automatically.
+
+SUPPORT:
+https://github.com/ultrasardine/multi-remmina
+EOF
+        
+        # Create a clean directory for packaging
+        mkdir -p Multi-Remmina-macOS
+        cp -R Multi-Remmina.app Multi-Remmina-macOS/
+        cp install-macos.sh Multi-Remmina-macOS/
+        cp INSTALL.txt Multi-Remmina-macOS/
+        
+        # Create ZIP (this is less likely to trigger quarantine issues)
+        zip -r Multi-Remmina-macOS.zip Multi-Remmina-macOS
+        
+        # Also create a DMG for users who prefer it
         hdiutil create -volname "Multi-Remmina" \
-          -srcfolder Multi-Remmina.app \
+          -srcfolder Multi-Remmina-macOS \
           -ov -format UDZO \
           Multi-Remmina-macOS.dmg
     
@@ -257,6 +295,7 @@ jobs:
       with:
         name: multi-remmina-macos
         path: |
+          Multi-Remmina*.zip
           Multi-Remmina*.dmg
         retention-days: 30
 
@@ -374,7 +413,8 @@ jobs:
         ### 📦 Downloads
         
         - **Linux**: Multi-Remmina-x86_64.AppImage (self-contained, no installation needed)
-        - **macOS**: Multi-Remmina-macOS.dmg (drag to Applications folder)
+        - **macOS**: Multi-Remmina-macOS.zip (RECOMMENDED - easier installation)
+        - **macOS**: Multi-Remmina-macOS.dmg (alternative format)
         
         ### What's New
         
@@ -389,27 +429,25 @@ jobs:
         ./Multi-Remmina-x86_64.AppImage
         \`\`\`
         
-        #### macOS (IMPORTANT - Read This!)
+        #### macOS
         
-        **The app is NOT code-signed. macOS will show a "damaged" error. This is normal for unsigned apps.**
-        
-        **Method 1 - Remove Quarantine (Recommended):**
+        **Download the ZIP file (recommended):**
         \`\`\`bash
-        # After downloading, open Terminal and run:
-        xattr -cr /Applications/Multi-Remmina.app
+        # Extract the ZIP
+        unzip Multi-Remmina-macOS.zip
+        cd Multi-Remmina-macOS
+        
+        # Run the installer
+        bash install-macos.sh
         \`\`\`
         
-        **Method 2 - Right-Click Open:**
-        1. Download the DMG file
-        2. Open it and drag Multi-Remmina.app to Applications
-        3. **Right-click** (or Control+click) on Multi-Remmina.app
-        4. Select "Open" from the menu
-        5. Click "Open" in the security dialog
+        **Or manually:**
+        1. Extract Multi-Remmina-macOS.zip
+        2. Drag Multi-Remmina.app to /Applications
+        3. Run: \`xattr -cr /Applications/Multi-Remmina.app\`
         
-        **Method 3 - System Settings:**
-        1. Try to open the app normally (it will fail)
-        2. Go to System Settings → Privacy & Security
-        3. Scroll down and click "Open Anyway" next to Multi-Remmina
+        **Why?** The app isn't code-signed ($99/year Apple Developer account required).
+        ZIP files have fewer Gatekeeper restrictions than DMG files.
         
         ### Supported Protocols
         
