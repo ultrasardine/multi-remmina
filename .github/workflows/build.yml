@@ -107,6 +107,70 @@ jobs:
         ls -la ${{github.workspace}}/staging/usr/ || echo "Staging directory not found"
         find ${{github.workspace}}/staging -name "multi-remmina" -o -name "remmina" || echo "Binary not found"
     
+    - name: Create .deb package
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        ARCH="amd64"
+        PKG_NAME="multi-remmina_${VERSION}_${ARCH}"
+        
+        # Create debian package structure
+        mkdir -p "${PKG_NAME}/DEBIAN"
+        mkdir -p "${PKG_NAME}/usr"
+        
+        # Copy installed files
+        cp -r staging/usr/* "${PKG_NAME}/usr/"
+        
+        # Calculate installed size (in KB)
+        INSTALLED_SIZE=$(du -sk "${PKG_NAME}/usr" | cut -f1)
+        
+        # Create control file
+        cat > "${PKG_NAME}/DEBIAN/control" << EOF
+        Package: multi-remmina
+        Version: ${VERSION}
+        Section: net
+        Priority: optional
+        Architecture: ${ARCH}
+        Depends: libgtk-3-0, libglib2.0-0, libsodium23, libssl3, libssh-4, libvncserver1, libavahi-ui-gtk3-0, libgcrypt20, libjson-glib-1.0-0, libsecret-1-0, libayatana-appindicator3-1, libvte-2.91-0, libwebkit2gtk-4.0-37, libcurl4, libcups2, libfreerdp2-2, libwinpr2-2
+        Maintainer: Multi-Remmina Project <ultrasardine@gmail.com>
+        Description: Multiplatform remote desktop client
+         Multi-Remmina is a remote desktop client supporting multiple protocols:
+         RDP, VNC, SPICE, X2Go, SSH, WWW, and EXEC.
+         .
+         Features include multi-protocol support, SSH tunneling, SFTP/FTP client,
+         multi-monitor support, and kiosk mode.
+        Homepage: https://github.com/ultrasardine/multi-remmina
+        Installed-Size: ${INSTALLED_SIZE}
+        EOF
+        
+        # Create postinst script for desktop integration
+        cat > "${PKG_NAME}/DEBIAN/postinst" << 'EOF'
+        #!/bin/bash
+        set -e
+        if [ "$1" = "configure" ]; then
+          # Update desktop database
+          if command -v update-desktop-database >/dev/null 2>&1; then
+            update-desktop-database -q /usr/share/applications || true
+          fi
+          # Update icon cache
+          if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+            gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+          fi
+          # Update MIME database
+          if command -v update-mime-database >/dev/null 2>&1; then
+            update-mime-database /usr/share/mime || true
+          fi
+        fi
+        exit 0
+        EOF
+        
+        chmod 755 "${PKG_NAME}/DEBIAN/postinst"
+        
+        # Build the .deb package
+        dpkg-deb --build "${PKG_NAME}"
+        
+        echo ".deb package created successfully:"
+        ls -lh *.deb
+    
     - name: Create AppImage
       run: |
         # Download linuxdeploy and GTK plugin
@@ -149,6 +213,7 @@ jobs:
         name: multi-remmina-linux-x86_64
         path: |
           Multi-Remmina*.AppImage
+          multi-remmina*.deb
         retention-days: 30
 
   # macOS build job
@@ -483,9 +548,13 @@ jobs:
         
         ### 📦 Downloads
         
-        - **Linux**: Multi-Remmina-x86_64.AppImage (self-contained, no installation needed)
-        - **macOS**: Multi-Remmina-macOS.zip (RECOMMENDED - easier installation)
-        - **macOS**: Multi-Remmina-macOS.dmg (alternative format)
+        **Linux:**
+        - **AppImage** (universal, works on all distros): Multi-Remmina-${VERSION}-x86_64.AppImage
+        - **DEB package** (Ubuntu/Debian): multi-remmina_${VERSION}_amd64.deb
+        
+        **macOS:**
+        - **ZIP** (RECOMMENDED - easier installation): Multi-Remmina-macOS.zip
+        - **DMG** (alternative format): Multi-Remmina-macOS.dmg
         
         ### What's New
         
@@ -493,11 +562,21 @@ jobs:
         
         ### Installation Instructions
         
-        #### Linux
+        #### Linux - AppImage (Universal)
         \`\`\`bash
         # Download the AppImage
-        chmod +x Multi-Remmina-x86_64.AppImage
-        ./Multi-Remmina-x86_64.AppImage
+        chmod +x Multi-Remmina-${VERSION}-x86_64.AppImage
+        ./Multi-Remmina-${VERSION}-x86_64.AppImage
+        \`\`\`
+        
+        #### Linux - DEB Package (Ubuntu/Debian)
+        \`\`\`bash
+        # Download and install
+        sudo apt install ./multi-remmina_${VERSION}_amd64.deb
+        
+        # Or use dpkg
+        sudo dpkg -i multi-remmina_${VERSION}_amd64.deb
+        sudo apt-get install -f  # Install dependencies if needed
         \`\`\`
         
         #### macOS
