@@ -2,9 +2,9 @@ name: Build and Test
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: [ master, main, dev ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ master, main, dev ]
   workflow_dispatch:
 
 env:
@@ -69,28 +69,37 @@ jobs:
     - name: Generate version
       id: version
       run: |
-        # Use CalVer: YYYY.M.PATCH (same as release job)
-        YEAR=$(date +%Y)
-        MONTH=$(date +%-m)
+        BRANCH="${{ github.ref_name }}"
         
-        # Find the latest tag for this month
-        LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
-        
-        if [ -z "$LATEST_TAG" ]; then
-          # First release this month
-          PATCH=0
+        if [ "$BRANCH" = "dev" ]; then
+          # Dev versioning: YYYY-M-BUILD_NUMBER-dev
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          BUILD_NUMBER=${{ github.run_number }}
+          VERSION="${YEAR}-${MONTH}-${BUILD_NUMBER}-dev"
         else
-          # Increment patch version
-          PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
-          PATCH=$((PATCH + 1))
+          # Stable versioning: YYYY.M.PATCH (CalVer)
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          
+          # Find the latest tag for this month
+          LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            PATCH=0
+          else
+            PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
+            PATCH=$((PATCH + 1))
+          fi
+          
+          VERSION="${YEAR}.${MONTH}.${PATCH}"
         fi
         
-        VERSION="${YEAR}.${MONTH}.${PATCH}"
         SHORT_SHA=$(git rev-parse --short HEAD)
         
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
-        echo "Generated version: $VERSION"
+        echo "Generated version for $BRANCH: $VERSION"
     
     - name: Run tests
       working-directory: build
@@ -273,28 +282,37 @@ jobs:
     - name: Generate version
       id: version
       run: |
-        # Use CalVer: YYYY.M.PATCH (same as release job)
-        YEAR=$(date +%Y)
-        MONTH=$(date +%-m)
+        BRANCH="${{ github.ref_name }}"
         
-        # Find the latest tag for this month
-        LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
-        
-        if [ -z "$LATEST_TAG" ]; then
-          # First release this month
-          PATCH=0
+        if [ "$BRANCH" = "dev" ]; then
+          # Dev versioning: YYYY-M-BUILD_NUMBER-dev
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          BUILD_NUMBER=${{ github.run_number }}
+          VERSION="${YEAR}-${MONTH}-${BUILD_NUMBER}-dev"
         else
-          # Increment patch version
-          PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
-          PATCH=$((PATCH + 1))
+          # Stable versioning: YYYY.M.PATCH (CalVer)
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          
+          # Find the latest tag for this month
+          LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            PATCH=0
+          else
+            PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
+            PATCH=$((PATCH + 1))
+          fi
+          
+          VERSION="${YEAR}.${MONTH}.${PATCH}"
         fi
         
-        VERSION="${YEAR}.${MONTH}.${PATCH}"
         SHORT_SHA=$(git rev-parse --short HEAD)
         
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
-        echo "Generated version: $VERSION"
+        echo "Generated version for $BRANCH: $VERSION"
     
     - name: Run tests
       working-directory: build
