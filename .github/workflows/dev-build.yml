@@ -205,6 +205,7 @@ jobs:
           -DWITH_VTE=OFF \
           -DWITH_WWW=OFF \
           -DWITH_FREERDP=ON \
+          -DWITH_FREERDP3=ON \
           -DWITH_SPICE=OFF \
           -DWITH_X2GO=OFF \
           -DWITH_PYTHONLIBS=OFF \
