@@ -1,10 +1,10 @@
-name: Build and Test
+name: Dev Build
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ dev ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ dev ]
   workflow_dispatch:
 
 env:
@@ -17,8 +17,8 @@ permissions:
 jobs:
   # Linux build job
   build-linux:
-    name: Build on Linux
-    runs-on: ubuntu-22.04  # Use Ubuntu 22.04 LTS for better package availability
+    name: Build on Linux (Dev)
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Checkout code
@@ -43,12 +43,6 @@ jobs:
           freerdp2-dev libwinpr2-dev \
           gettext intltool
     
-    - name: Install FreeRDP
-      run: |
-        # FreeRDP is not available in default repos, skip it for now
-        # RDP plugin will be disabled but other protocols will work
-        echo "Skipping FreeRDP installation - not available in Ubuntu default repos"
-    
     - name: Configure CMake
       run: |
         cmake -B build \
@@ -66,46 +60,24 @@ jobs:
     - name: Build
       run: cmake --build build --config ${{env.BUILD_TYPE}} -j$(nproc)
     
-    - name: Generate version
+    - name: Generate dev version
       id: version
       run: |
-        # Use CalVer: YYYY.M.PATCH (same as release job)
+        # Dev versioning: YYYY-M-BUILD_NUMBER-dev
         YEAR=$(date +%Y)
         MONTH=$(date +%-m)
+        BUILD_NUMBER=${{ github.run_number }}
         
-        # Find the latest tag for this month
-        LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
-        
-        if [ -z "$LATEST_TAG" ]; then
-          # First release this month
-          PATCH=0
-        else
-          # Increment patch version
-          PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
-          PATCH=$((PATCH + 1))
-        fi
-        
-        VERSION="${YEAR}.${MONTH}.${PATCH}"
+        VERSION="${YEAR}-${MONTH}-${BUILD_NUMBER}-dev"
         SHORT_SHA=$(git rev-parse --short HEAD)
         
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
-        echo "Generated version: $VERSION"
-    
-    - name: Run tests
-      working-directory: build
-      run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure || true
+        echo "Generated dev version: $VERSION"
     
     - name: Install to staging
       run: |
         DESTDIR=${{github.workspace}}/staging cmake --install build
-      continue-on-error: false
-    
-    - name: Verify installation
-      run: |
-        echo "Checking staging directory:"
-        ls -la ${{github.workspace}}/staging/usr/ || echo "Staging directory not found"
-        find ${{github.workspace}}/staging -name "multi-remmina" -o -name "remmina" || echo "Binary not found"
     
     - name: Create .deb package
       run: |
@@ -113,17 +85,13 @@ jobs:
         ARCH="amd64"
         PKG_NAME="multi-remmina_${VERSION}_${ARCH}"
         
-        # Create debian package structure
         mkdir -p "${PKG_NAME}/DEBIAN"
         mkdir -p "${PKG_NAME}/usr"
         
-        # Copy installed files
         cp -r staging/usr/* "${PKG_NAME}/usr/"
         
-        # Calculate installed size (in KB)
         INSTALLED_SIZE=$(du -sk "${PKG_NAME}/usr" | cut -f1)
         
-        # Create control file
         cat > "${PKG_NAME}/DEBIAN/control" << EOF
         Package: multi-remmina
         Version: ${VERSION}
@@ -132,30 +100,24 @@ jobs:
         Architecture: ${ARCH}
         Depends: libgtk-3-0, libglib2.0-0, libsodium23, libssl3, libssh-4, libvncserver1, libavahi-ui-gtk3-0, libgcrypt20, libjson-glib-1.0-0, libsecret-1-0, libayatana-appindicator3-1, libvte-2.91-0, libwebkit2gtk-4.0-37, libcurl4, libcups2, libfreerdp2-2, libwinpr2-2
         Maintainer: Multi-Remmina Project <ultrasardine@gmail.com>
-        Description: Multiplatform remote desktop client
-         Multi-Remmina is a remote desktop client supporting multiple protocols:
-         RDP, VNC, SPICE, X2Go, SSH, WWW, and EXEC.
+        Description: Multiplatform remote desktop client (DEV BUILD)
+         Multi-Remmina is a remote desktop client supporting multiple protocols.
          .
-         Features include multi-protocol support, SSH tunneling, SFTP/FTP client,
-         multi-monitor support, and kiosk mode.
+         This is a development build and may be unstable.
         Homepage: https://github.com/ultrasardine/multi-remmina
         Installed-Size: ${INSTALLED_SIZE}
         EOF
         
-        # Create postinst script for desktop integration
         cat > "${PKG_NAME}/DEBIAN/postinst" << 'EOF'
         #!/bin/bash
         set -e
         if [ "$1" = "configure" ]; then
-          # Update desktop database
           if command -v update-desktop-database >/dev/null 2>&1; then
             update-desktop-database -q /usr/share/applications || true
           fi
-          # Update icon cache
           if command -v gtk-update-icon-cache >/dev/null 2>&1; then
             gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
           fi
-          # Update MIME database
           if command -v update-mime-database >/dev/null 2>&1; then
             update-mime-database /usr/share/mime || true
           fi
@@ -165,7 +127,6 @@ jobs:
         
         chmod 755 "${PKG_NAME}/DEBIAN/postinst"
         
-        # Build the .deb package
         dpkg-deb --build "${PKG_NAME}"
         
         echo ".deb package created successfully:"
@@ -173,28 +134,22 @@ jobs:
     
     - name: Create AppImage
       run: |
-        # Download linuxdeploy and GTK plugin
         wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
         wget -q https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
         chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh
         
-        # Create AppDir structure
         mkdir -p AppDir/usr
         cp -r staging/usr/* AppDir/usr/
         
-        # Bundle all dependencies including GTK, FreeRDP, VNC, etc.
         export DEPLOY_GTK_VERSION=3
         export LINUXDEPLOY_PLUGIN_GTK_DEPLOY_GLIB_SCHEMAS=1
         
-        # Create AppImage with all dependencies bundled
         ./linuxdeploy-x86_64.AppImage \
           --appdir AppDir \
           --plugin gtk \
           --output appimage || echo "AppImage creation had warnings"
         
-        # Check if AppImage was created (it may be named Remmina-*.AppImage or Multi-Remmina-*.AppImage)
         if ls *-x86_64.AppImage 1> /dev/null 2>&1; then
-          # Rename to include version
           VERSION="${{ steps.version.outputs.version }}"
           for file in *-x86_64.AppImage; do
             mv "$file" "Multi-Remmina-${VERSION}-x86_64.AppImage"
@@ -203,14 +158,13 @@ jobs:
           ls -lh Multi-Remmina*.AppImage
         else
           echo "ERROR: AppImage was not created"
-          ls -la *.AppImage || echo "No AppImage files found"
           exit 1
         fi
     
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: multi-remmina-linux-x86_64
+        name: multi-remmina-linux-dev-${{ steps.version.outputs.version }}
         path: |
           Multi-Remmina*.AppImage
           multi-remmina*.deb
@@ -218,7 +172,7 @@ jobs:
 
   # macOS build job
   build-macos:
-    name: Build on macOS
+    name: Build on macOS (Dev)
     runs-on: macos-latest
     
     steps:
@@ -229,15 +183,12 @@ jobs:
     
     - name: Install dependencies
       run: |
-        # Install core dependencies for macOS
-        # Note: SPICE and WebKitGTK have Linux-specific dependencies
         brew install cmake pkg-config gtk+3 glib libsodium openssl@3 \
                      libssh libvncserver gettext json-glib libgcrypt curl \
                      freerdp || true
     
     - name: Configure CMake
       run: |
-        # Get FreeRDP paths from Homebrew
         FREERDP_PREFIX=$(brew --prefix freerdp)
         
         cmake -B build \
@@ -269,70 +220,45 @@ jobs:
         find build/plugins -name "*.so" -o -name "*.dylib"
         echo "=== Plugin build complete ==="
     
-    - name: Generate version
+    - name: Generate dev version
       id: version
       run: |
-        # Use CalVer: YYYY.M.PATCH (same as release job)
         YEAR=$(date +%Y)
         MONTH=$(date +%-m)
+        BUILD_NUMBER=${{ github.run_number }}
         
-        # Find the latest tag for this month
-        LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
-        
-        if [ -z "$LATEST_TAG" ]; then
-          # First release this month
-          PATCH=0
-        else
-          # Increment patch version
-          PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
-          PATCH=$((PATCH + 1))
-        fi
-        
-        VERSION="${YEAR}.${MONTH}.${PATCH}"
+        VERSION="${YEAR}-${MONTH}-${BUILD_NUMBER}-dev"
         SHORT_SHA=$(git rev-parse --short HEAD)
         
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
-        echo "Generated version: $VERSION"
-    
-    - name: Run tests
-      working-directory: build
-      run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure || true
+        echo "Generated dev version: $VERSION"
     
     - name: Create application bundle
       run: |
-        # Find the actual binary location (macOS doesn't support -executable flag)
         BINARY_PATH=$(find build/src -name "multi-remmina" -type f | head -1)
         
         if [ -z "$BINARY_PATH" ]; then
-          # Try alternative name
           BINARY_PATH=$(find build/src -name "remmina" -type f | head -1)
         fi
         
         if [ -z "$BINARY_PATH" ]; then
           echo "Error: multi-remmina binary not found"
-          echo "Contents of build/src:"
-          ls -la build/src/ || true
           exit 1
         fi
         
         echo "Found binary at: $BINARY_PATH"
         
-        # Create app bundle structure
         mkdir -p Multi-Remmina.app/Contents/{MacOS,Resources,Frameworks,lib}
         
-        # Copy binary
         cp "$BINARY_PATH" Multi-Remmina.app/Contents/MacOS/multi-remmina
         chmod +x Multi-Remmina.app/Contents/MacOS/multi-remmina
         
-        # Copy plugins to the correct Multi-Remmina location
-        # Note: Path changed from lib/remmina/plugins to lib/multi-remmina/plugins
         mkdir -p Multi-Remmina.app/Contents/Resources/lib/multi-remmina/plugins
         
         echo "Looking for plugin files..."
         find build/plugins -name "*.so" -o -name "*.dylib" || echo "No plugins found"
         
-        # Copy all plugin files
         find build/plugins -type f \( -name "*.so" -o -name "*.dylib" \) | while read plugin; do
           echo "Copying plugin: $plugin"
           cp "$plugin" Multi-Remmina.app/Contents/Resources/lib/multi-remmina/plugins/ || true
@@ -341,14 +267,10 @@ jobs:
         echo "Plugins in app bundle:"
         ls -la Multi-Remmina.app/Contents/Resources/lib/multi-remmina/plugins/
         
-        # Copy resources (icons, UI files, themes)
         cp -r data/ui Multi-Remmina.app/Contents/Resources/ 2>/dev/null || true
         cp -r data/theme Multi-Remmina.app/Contents/Resources/ 2>/dev/null || true
         
-        # Create proper macOS .icns icon file
         mkdir -p AppIcon.iconset
-        
-        # Copy PNG icons at required sizes for .icns
         cp data/desktop/16x16/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_16x16.png
         cp data/desktop/32x32/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_16x16@2x.png
         cp data/desktop/32x32/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_32x32.png
@@ -359,23 +281,19 @@ jobs:
         cp data/desktop/512x512/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_256x256@2x.png
         cp data/desktop/512x512/apps/org.multi-remmina.MultiRemmina.png AppIcon.iconset/icon_512x512.png
         
-        # Convert to .icns
         iconutil -c icns AppIcon.iconset -o Multi-Remmina.app/Contents/Resources/AppIcon.icns
         
         echo "Icon created successfully:"
         ls -lh Multi-Remmina.app/Contents/Resources/AppIcon.icns
         
-        # Bundle all Homebrew dependencies using dylibbundler
         brew install dylibbundler
         
-        # Bundle dependencies into Frameworks
         dylibbundler -od -b \
           -x Multi-Remmina.app/Contents/MacOS/multi-remmina \
           -d Multi-Remmina.app/Contents/Frameworks \
           -p @executable_path/../Frameworks \
           || echo "dylibbundler completed with warnings"
         
-        # Also bundle plugin dependencies
         for plugin in Multi-Remmina.app/Contents/Resources/lib/multi-remmina/plugins/*.so; do
           if [ -f "$plugin" ]; then
             echo "Bundling dependencies for: $plugin"
@@ -387,10 +305,8 @@ jobs:
           fi
         done
         
-        # Remove quarantine attributes (helps with Gatekeeper)
         xattr -cr Multi-Remmina.app || true
         
-        # Create Info.plist with dynamic version
         cat > Multi-Remmina.app/Contents/Info.plist << EOFPLIST
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -399,11 +315,11 @@ jobs:
             <key>CFBundleExecutable</key>
             <string>multi-remmina</string>
             <key>CFBundleIdentifier</key>
-            <string>org.multi-remmina.MultiRemmina</string>
+            <string>org.multi-remmina.MultiRemmina.dev</string>
             <key>CFBundleName</key>
-            <string>Multi-Remmina</string>
+            <string>Multi-Remmina Dev</string>
             <key>CFBundleDisplayName</key>
-            <string>Multi-Remmina</string>
+            <string>Multi-Remmina Dev</string>
             <key>CFBundleVersion</key>
             <string>${{ steps.version.outputs.version }}</string>
             <key>CFBundleShortVersionString</key>
@@ -420,15 +336,15 @@ jobs:
     
     - name: Create ZIP archive
       run: |
-        # Copy installer script
         cp scripts/install-macos.sh .
         
-        # Create README for the archive
         cat > INSTALL.txt << 'EOFINSTALL'
-        Multi-Remmina for macOS - Installation Instructions
-        ====================================================
+        Multi-Remmina for macOS - DEV BUILD
+        ====================================
         
-        QUICK INSTALL (Recommended):
+        This is a development build and may be unstable.
+        
+        QUICK INSTALL:
           1. Extract this ZIP file
           2. Open Terminal in the extracted folder
           3. Run: bash install-macos.sh
@@ -440,238 +356,27 @@ jobs:
              xattr -cr /Applications/Multi-Remmina.app
           4. Launch Multi-Remmina from Applications
         
-        WHY IS THIS NEEDED?
-        This app is not code-signed with an Apple Developer certificate.
-        macOS Gatekeeper blocks unsigned apps by default.
-        The installer script removes the quarantine flag automatically.
-        
-        SUPPORT:
-        https://github.com/ultrasardine/multi-remmina
+        Version: ${{ steps.version.outputs.version }}
+        Commit: ${{ steps.version.outputs.short_sha }}
         EOFINSTALL
         
-        # Create a clean directory for packaging
-        mkdir -p Multi-Remmina-macOS
-        cp -R Multi-Remmina.app Multi-Remmina-macOS/
-        cp install-macos.sh Multi-Remmina-macOS/
-        cp INSTALL.txt Multi-Remmina-macOS/
+        mkdir -p Multi-Remmina-macOS-Dev
+        cp -R Multi-Remmina.app Multi-Remmina-macOS-Dev/
+        cp install-macos.sh Multi-Remmina-macOS-Dev/
+        cp INSTALL.txt Multi-Remmina-macOS-Dev/
         
-        # Create ZIP (this is less likely to trigger quarantine issues)
-        zip -r Multi-Remmina-macOS.zip Multi-Remmina-macOS
+        zip -r Multi-Remmina-${{ steps.version.outputs.version }}-macOS.zip Multi-Remmina-macOS-Dev
         
-        # Also create a DMG for users who prefer it
-        hdiutil create -volname "Multi-Remmina" \
-          -srcfolder Multi-Remmina-macOS \
+        hdiutil create -volname "Multi-Remmina Dev" \
+          -srcfolder Multi-Remmina-macOS-Dev \
           -ov -format UDZO \
-          Multi-Remmina-macOS.dmg
+          Multi-Remmina-${{ steps.version.outputs.version }}-macOS.dmg
     
     - name: Upload macOS artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: multi-remmina-macos
+        name: multi-remmina-macos-dev-${{ steps.version.outputs.version }}
         path: |
           Multi-Remmina*.zip
           Multi-Remmina*.dmg
         retention-days: 30
-
-  # Code quality checks
-  code-quality:
-    name: Code Quality Checks
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y cppcheck clang-format
-    
-    - name: Run cppcheck
-      run: |
-        cppcheck --enable=warning,style,performance,portability \
-          --suppress=missingIncludeSystem \
-          --inline-suppr \
-          --error-exitcode=0 \
-          src/ plugins/ || true
-    
-    - name: Check code formatting
-      run: |
-        # Check if code follows formatting standards
-        find src plugins -name "*.c" -o -name "*.h" | \
-          xargs clang-format --dry-run --Werror || true
-
-  # Create automatic stable release on every master push
-  create-release:
-    name: Create Release
-    needs: [build-linux, build-macos]
-    runs-on: ubuntu-latest
-    # Only run if both builds succeeded
-    if: |
-      github.event_name == 'push' && 
-      github.ref == 'refs/heads/master' &&
-      needs.build-linux.result == 'success' &&
-      needs.build-macos.result == 'success'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Generate semantic version
-      id: version
-      run: |
-        # Use CalVer: YYYY.MM.PATCH (e.g., 2026.1.0)
-        YEAR=$(date +%Y)
-        MONTH=$(date +%-m)
-        
-        # Find the latest tag for this month
-        LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
-        
-        if [ -z "$LATEST_TAG" ]; then
-          # First release this month
-          PATCH=0
-        else
-          # Increment patch version
-          PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
-          PATCH=$((PATCH + 1))
-        fi
-        
-        VERSION="${YEAR}.${MONTH}.${PATCH}"
-        TAG="v${VERSION}"
-        
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "tag=$TAG" >> $GITHUB_OUTPUT
-        echo "Generated version: $VERSION (tag: $TAG)"
-    
-    - name: Download Linux artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: multi-remmina-linux-x86_64
-        path: ./artifacts/linux
-      continue-on-error: true
-    
-    - name: Download macOS artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: multi-remmina-macos
-        path: ./artifacts/macos
-      continue-on-error: true
-    
-    - name: List downloaded artifacts
-      run: |
-        echo "Linux artifacts:"
-        ls -lah ./artifacts/linux/ || echo "No Linux artifacts found"
-        echo "macOS artifacts:"
-        ls -lah ./artifacts/macos/ || echo "No macOS artifacts found"
-    
-    - name: Generate release notes
-      id: release_notes
-      run: |
-        # Get commits since last release tag
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-        
-        if [ -z "$LAST_TAG" ]; then
-          COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges | head -20)
-        else
-          COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
-        fi
-        
-        cat > release_notes.md << EOF
-        ## Multi-Remmina v${{ steps.version.outputs.version }}
-        
-        **Release Date**: $(date -u +"%Y-%m-%d")  
-        **Commit**: ${GITHUB_SHA}
-        
-        ### 📦 Downloads
-        
-        **Linux:**
-        - **AppImage** (universal, works on all distros): Multi-Remmina-${VERSION}-x86_64.AppImage
-        - **DEB package** (Ubuntu/Debian): multi-remmina_${VERSION}_amd64.deb
-        
-        **macOS:**
-        - **ZIP** (RECOMMENDED - easier installation): Multi-Remmina-macOS.zip
-        - **DMG** (alternative format): Multi-Remmina-macOS.dmg
-        
-        ### What's New
-        
-        ${COMMITS}
-        
-        ### Installation Instructions
-        
-        #### Linux - AppImage (Universal)
-        \`\`\`bash
-        # Download the AppImage
-        chmod +x Multi-Remmina-${VERSION}-x86_64.AppImage
-        ./Multi-Remmina-${VERSION}-x86_64.AppImage
-        \`\`\`
-        
-        #### Linux - DEB Package (Ubuntu/Debian)
-        \`\`\`bash
-        # Download and install
-        sudo apt install ./multi-remmina_${VERSION}_amd64.deb
-        
-        # Or use dpkg
-        sudo dpkg -i multi-remmina_${VERSION}_amd64.deb
-        sudo apt-get install -f  # Install dependencies if needed
-        \`\`\`
-        
-        #### macOS
-        
-        **Download the ZIP file (recommended):**
-        \`\`\`bash
-        # Extract the ZIP
-        unzip Multi-Remmina-macOS.zip
-        cd Multi-Remmina-macOS
-        
-        # Run the installer
-        bash install-macos.sh
-        \`\`\`
-        
-        **Or manually:**
-        1. Extract Multi-Remmina-macOS.zip
-        2. Drag Multi-Remmina.app to /Applications
-        3. Run: \`xattr -cr /Applications/Multi-Remmina.app\`
-        
-        **Why?** The app isn't code-signed ($99/year Apple Developer account required).
-        ZIP files have fewer Gatekeeper restrictions than DMG files.
-        
-        ### Supported Protocols
-        
-        - RDP (Remote Desktop Protocol)
-        - VNC (Virtual Network Computing)
-        - SSH (Secure Shell)
-        - SFTP (SSH File Transfer)
-        - SPICE
-        - X2Go
-        - WWW (HTTP)
-        - EXEC (Command execution)
-        
-        ---
-        
-        **Full Changelog**: https://github.com/${{ github.repository }}/compare/${LAST_TAG}...${{ steps.version.outputs.tag }}
-        EOF
-        
-        cat release_notes.md
-    
-    - name: Create git tag
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git tag -a ${{ steps.version.outputs.tag }} -m "Release ${{ steps.version.outputs.version }}"
-        git push origin ${{ steps.version.outputs.tag }}
-    
-    - name: Create release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ steps.version.outputs.tag }}
-        name: "Multi-Remmina v${{ steps.version.outputs.version }}"
-        body_path: release_notes.md
-        draft: false
-        prerelease: false
-        files: |
-          artifacts/linux/*
-          artifacts/macos/*
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
