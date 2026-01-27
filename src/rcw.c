@@ -4748,9 +4748,9 @@ static void rcw_gtksocket_not_available_dialog_response(GtkDialog *			self,
 	if (response_id == GTKSOCKET_NOT_AVAIL_RESPONSE_OPEN_BROWSER) {
 		gtk_show_uri_on_window(
 			NULL,
-			// TRANSLATORS: This should be a link to the Remmina wiki page:
+			// TRANSLATORS: This should be a link to the Multi-Remmina wiki page:
 			// TRANSLATORS: 'GtkSocket feature is not available'.
-			_("https://gitlab.com/Remmina/Remmina/-/wikis/GtkSocket-feature-is-not-available-in-a-Wayland-session"),
+			_("https://github.com/ultrasardine/multi-remmina/wiki/GtkSocket-Wayland"),
 			GDK_CURRENT_TIME, &error
 			);
 	}
@@ -4903,12 +4903,12 @@ GtkWidget *rcw_open_from_file_full(RemminaFile *remminafile, GCallback disconnec
 				 "feature is unavailable in a Wayland session.");
 
 		gchar *err_msg =
-			// TRANSLATORS: This should be a link to the Remmina wiki page:
+			// TRANSLATORS: This should be a link to the Multi-Remmina wiki page:
 			// 'GtkSocket feature is not available'.
 			_("Plugins relying on GtkSocket can't run in a "
 			  "Wayland session.\nFor more info and a possible "
-			  "workaround, please visit the Remmina wiki at:\n\n"
-			  "https://gitlab.com/Remmina/Remmina/-/wikis/GtkSocket-feature-is-not-available-in-a-Wayland-session");
+			  "workaround, please visit the Multi-Remmina wiki at:\n\n"
+			  "https://github.com/ultrasardine/multi-remmina/wiki/GtkSocket-Wayland");
 
 		dialog = gtk_message_dialog_new(
 			GTK_WINDOW(cnnobj->cnnwin),

@@ -404,8 +404,8 @@ int main(int argc, char *argv[])
 		g_message(_("Remmina does not log all output statements. "
 			    "Turn on more verbose output by using "
 			    "\"G_MESSAGES_DEBUG=remmina\" as an environment variable.\n"
-			    "More info available on the Remmina wiki at:\n"
-			    "https://gitlab.com/Remmina/Remmina/-/wikis/Usage/Remmina-debugging"
+			    "More info available on the Multi-Remmina wiki at:\n"
+			    "https://github.com/ultrasardine/multi-remmina/wiki"
 		));
 	}
 

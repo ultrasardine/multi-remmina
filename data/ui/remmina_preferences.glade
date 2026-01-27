@@ -526,7 +526,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
                         <property name="margin-right">6</property>
                         <property name="margin-start">18</property>
                         <property name="margin-end">6</property>
-                        <property name="label" translatable="yes">Disable news from &lt;a href="https://remmina.org" title="Remmina news site"&gt;remmina.org&lt;/a&gt;</property>
+                        <property name="label" translatable="yes">Disable news from &lt;a href="https://github.com/ultrasardine/multi-remmina" title="Multi-Remmina project"&gt;Multi-Remmina&lt;/a&gt;</property>
                         <property name="use-markup">True</property>
                         <property name="justify">right</property>
                       </object>

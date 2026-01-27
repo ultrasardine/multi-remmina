@@ -6,17 +6,17 @@
   Copyright (C) 2022-2023 Antenore Gatta, Giovanni Panozzo, Hiroyuki Tanaka.
 -->
 <component type="desktop-application">
-  <id>org.remmina.Remmina</id>
-  <launchable type="desktop-id">org.remmina.Remmina.desktop</launchable>
+  <id>org.multi-remmina.MultiRemmina</id>
+  <launchable type="desktop-id">org.multi-remmina.MultiRemmina.desktop</launchable>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-2.0+</project_license>
-  <name>Remmina</name>
-  <developer id="org.remmina">
-    <name>Hiroyuki_Tanaka</name>
+  <name>Multi-Remmina</name>
+  <developer id="org.multi-remmina">
+    <name>Multi-Remmina Contributors</name>
   </developer>
-  <name xml:lang="it">Remmina</name>
-  <name xml:lang="fr">Remmina</name>
-  <name xml:lang="hr">Remmina</name>
+  <name xml:lang="it">Multi-Remmina</name>
+  <name xml:lang="fr">Multi-Remmina</name>
+  <name xml:lang="hr">Multi-Remmina</name>
   <summary>Remote Desktop Client</summary>
   <summary xml:lang="it">Client di connessione a desktop remoti</summary>
   <summary xml:lang="fr">Client de contrôle de bureau à distance</summary>
@@ -27,8 +27,9 @@
   </releases>
   <description>
     <p>
-      Remmina is a remote-desktop client written in GTK, to
-      use other desktops remotely, from a tiny screen or large monitors.
+      Multi-Remmina is a multiplatform remote-desktop client based on Remmina, written in GTK, to
+      use other desktops remotely, from a tiny screen or large monitors. It extends Remmina with
+      support for macOS and FreeBSD while maintaining full Linux compatibility.
     </p>
     <p xml:lang="it">
       Remmina è un visualizzatore di desktop remoti scritto in GTK, utile per
@@ -50,7 +51,7 @@
     </p>
 
     <p>
-      Remmina supports multiple network protocols in an integrated and
+      Multi-Remmina supports multiple network protocols in an integrated and
       consistent user interface. The protocols currently supported are:
         X2Go, RDP (Remote Desktop Protocol), VNC (Virtual Network Computing),
         and SSH (Secure Shell / Open SSH).
@@ -90,27 +91,27 @@
   </description>
   <screenshots>
     <screenshot type="default">
-      <image>https://remmina.org/assets/images/RemminaUI.png</image>
+      <image>https://raw.githubusercontent.com/ultrasardine/multi-remmina/main/res/screenshots/main-window.png</image>
     </screenshot>
     <screenshot>
-      <image>https://www.remmina.org/images/appdata/protocol-rdp.png</image>
+      <image>https://raw.githubusercontent.com/ultrasardine/multi-remmina/main/res/screenshots/protocol-rdp.png</image>
     </screenshot>
     <screenshot>
-      <image>https://www.remmina.org/images/appdata/protocol-vnc.png</image>
+      <image>https://raw.githubusercontent.com/ultrasardine/multi-remmina/main/res/screenshots/protocol-vnc.png</image>
     </screenshot>
     <screenshot>
-      <image>https://www.remmina.org/images/appdata/protocol-ssh.png</image>
+      <image>https://raw.githubusercontent.com/ultrasardine/multi-remmina/main/res/screenshots/protocol-ssh.png</image>
     </screenshot>
     <screenshot>
-      <image>https://www.remmina.org/images/appdata/protocol-sftp.png</image>
+      <image>https://raw.githubusercontent.com/ultrasardine/multi-remmina/main/res/screenshots/protocol-sftp.png</image>
     </screenshot>
   </screenshots>
-  <url type="homepage">https://www.remmina.org/</url>
-  <url type="bugtracker">https://gitlab.com/Remmina/Remmina/issues</url>
-  <url type="help">https://gitlab.com/Remmina/Remmina/wikis/home</url>
+  <url type="homepage">https://github.com/ultrasardine/multi-remmina</url>
+  <url type="bugtracker">https://github.com/ultrasardine/multi-remmina/issues</url>
+  <url type="help">https://github.com/ultrasardine/multi-remmina/wiki</url>
   <provides>
      <mediatype>application/x-remmina</mediatype>
   </provides>
   <translation type="gettext">remmina</translation>
-  <update_contact>admin@remmina.org</update_contact>
+  <update_contact>https://github.com/ultrasardine/multi-remmina</update_contact>
 </component>

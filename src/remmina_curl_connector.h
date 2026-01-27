@@ -39,10 +39,12 @@
 
 G_BEGIN_DECLS
 
-#define DOWNLOAD_URL "https://plugins.remmina.org/plugins/plugin_download"
-#define LIST_URL "https://plugins.remmina.org/plugins/get_list"
-#define PERIODIC_UPLOAD_URL "https://info.remmina.org/info/upload_stats"
-#define INFO_REQUEST_URL "https://info.remmina.org/info/handshake"
+/* Plugin download functionality is not available in Multi-Remmina */
+#define DOWNLOAD_URL "https://github.com/ultrasardine/multi-remmina"
+#define LIST_URL "https://github.com/ultrasardine/multi-remmina"
+/* Stats collection is disabled in Multi-Remmina */
+#define PERIODIC_UPLOAD_URL "https://github.com/ultrasardine/multi-remmina"
+#define INFO_REQUEST_URL "https://github.com/ultrasardine/multi-remmina"
 
 #define RED_TEXT(str) g_markup_printf_escaped("<span color=\"red\">%s</span>", str)
 #define GREEN_TEXT(str) g_markup_printf_escaped("<span color=\"green\">%s</span>", str)

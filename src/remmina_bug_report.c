@@ -49,7 +49,7 @@
 	#define json_node_unref(x) json_node_free(x)
 #endif
 
-#define BUG_REPORT_UPLOAD_URL "https://info.remmina.org/bug_report/bug_report"
+#define BUG_REPORT_UPLOAD_URL "https://github.com/ultrasardine/multi-remmina/issues/new"
 static RemminaBugReportDialog *remmina_bug_report_dialog;
 
 #define GET_OBJECT(object_name) gtk_builder_get_object(remmina_bug_report_dialog->builder, object_name)
@@ -140,92 +140,100 @@ void remmina_bug_report_open(GtkWindow *parent)
 void remmina_bug_report_dialog_on_action_submit(GSimpleAction *action, GVariant *param, gpointer data)
 {
 	TRACE_CALL(__func__);
-	JsonGenerator *g;
-	JsonObject *o;
-	gchar *b;
+	GError *error = NULL;
 
-	REMMINA_DEBUG("Submit Button Clicked. Uploading Bug Report data.");
+	REMMINA_DEBUG("Submit Button Clicked. Opening GitHub Issues page.");
 
-	gchar *markup = GRAY_TEXT("Sending Bug Report...");
+	gchar *markup = GRAY_TEXT("Opening GitHub Issues...");
 	gtk_label_set_markup(remmina_bug_report_dialog->bug_report_submit_status_label, markup);
 	g_free(markup);
 
-	// Store bug report info in JSON blob and encode before submitting
-	JsonNode *bug_report_data = remmina_bug_report_get_all();
+	// Get bug report data for clipboard
+	const gchar *name = gtk_entry_get_text(remmina_bug_report_dialog->bug_report_name_entry);
+	const gchar *email = gtk_entry_get_text(remmina_bug_report_dialog->bug_report_email_entry);
+	const gchar *title = gtk_entry_get_text(remmina_bug_report_dialog->bug_report_title_entry);
 
-	if (bug_report_data == NULL || (o = json_node_get_object(bug_report_data)) == NULL) {
-		REMMINA_DEBUG("Failed to grab bug report data, no request is sent");
-		gchar *markup = RED_TEXT("Failure: Unable to generate bug report message. Please try again.");
-		gtk_label_set_markup(remmina_bug_report_dialog->bug_report_submit_status_label, markup);
-		g_free(markup);
-		json_node_unref(bug_report_data);
-		return;
-	} else if (strcmp(json_object_get_string_member(json_node_get_object(bug_report_data), "Name"), "") == 0) {
-		REMMINA_DEBUG("No text in name entry of bug report data, no request is sent");
+	GtkTextBuffer *buffer;
+	gchar *description_text;
+	GtkTextIter start, end;
+	buffer = gtk_text_view_get_buffer(remmina_bug_report_dialog->bug_report_description_textview);
+	gtk_text_buffer_get_start_iter(buffer, &start);
+	gtk_text_buffer_get_iter_at_offset(buffer, &end, MAX_DESCRIPTION_LENGTH);
+	description_text = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
+
+	// Validate required fields
+	if (strcmp(name, "") == 0) {
+		REMMINA_DEBUG("No text in name entry of bug report data");
 		gchar *markup = RED_TEXT("Failure: Name/Username is required. Please enter a Name/Username.");
 		gtk_label_set_markup(remmina_bug_report_dialog->bug_report_submit_status_label, markup);
 		g_free(markup);
-		json_node_unref(bug_report_data);
+		g_free(description_text);
 		return;
-	} else {
-		gchar *email_text = g_strdup(json_object_get_string_member(json_node_get_object(bug_report_data), "Email"));
-		if (strcmp(email_text, "") == 0) {
-			REMMINA_DEBUG("No text in email entry of bug report data, no request is sent");
-			gchar *markup = RED_TEXT("Failure: Email is required. Please enter an email.");
-			gtk_label_set_markup(remmina_bug_report_dialog->bug_report_submit_status_label, markup);
-			g_free(markup);
-			g_free(email_text);
-			json_node_unref(bug_report_data);
-			return;
-		} else {
-			gchar *save_ptr;
-			gchar *check_for_at_symbol = strtok_r(email_text, "@", &save_ptr);
-			gchar *check_for_dot = strtok_r(NULL, ".", &save_ptr);
-			gchar *check_for_domain = strtok_r(NULL, "", &save_ptr);
-			if (check_for_at_symbol == NULL || check_for_dot == NULL || check_for_domain == NULL) {
-				REMMINA_DEBUG("Text in email entry of bug report data is not a valid email, no request is sent");
-				gchar *markup = RED_TEXT("Failure: A valid email is required. Email is missing a prefix or domain.");
-				gtk_label_set_markup(remmina_bug_report_dialog->bug_report_submit_status_label, markup);
-				g_free(markup);
-				g_free(email_text);
-				json_node_unref(bug_report_data);
-				return;
-			} else if (strpbrk(check_for_at_symbol, "@.") != NULL || strpbrk(check_for_dot, "@.") != NULL || strpbrk(check_for_domain, "@.") != NULL) {
-				REMMINA_DEBUG("Text in email entry of bug report data is not a valid email, no request is sent");
-				gchar *markup = RED_TEXT("Failure: A valid email is required. Email contains extra @ and . characters.");
-				gtk_label_set_markup(remmina_bug_report_dialog->bug_report_submit_status_label, markup);
-				g_free(markup);
-				g_free(email_text);
-				json_node_unref(bug_report_data);
-				return;
-			}
-		}
-		g_free(email_text);
-		if (strcmp(json_object_get_string_member(json_node_get_object(bug_report_data), "Bug_Title"), "") == 0) {
-			REMMINA_DEBUG("No text in bug title entry of bug report data, no request is sent");
-			gchar *markup = RED_TEXT("Failure: Bug Title is required. Please enter a Bug Title.");
-			gtk_label_set_markup(remmina_bug_report_dialog->bug_report_submit_status_label, markup);
-			g_free(markup);
-			json_node_unref(bug_report_data);
-			return;
-		} else if (strcmp(json_object_get_string_member(json_node_get_object(bug_report_data), "Bug_Description"), "") == 0 || 
-				strcmp(json_object_get_string_member(json_node_get_object(bug_report_data), "Bug_Description"), bug_report_preview_text_md) == 0) {
-			REMMINA_DEBUG("No text in bug description of bug report data, no request is sent");
-			gchar *markup = RED_TEXT("Failure: Bug Description is required. Please fill out the template.");
-			gtk_label_set_markup(remmina_bug_report_dialog->bug_report_submit_status_label, markup);
-			g_free(markup);
-			json_node_unref(bug_report_data);
-			return;
+	}
+
+	if (strcmp(title, "") == 0) {
+		REMMINA_DEBUG("No text in bug title entry of bug report data");
+		gchar *markup = RED_TEXT("Failure: Bug Title is required. Please enter a Bug Title.");
+		gtk_label_set_markup(remmina_bug_report_dialog->bug_report_submit_status_label, markup);
+		g_free(markup);
+		g_free(description_text);
+		return;
+	}
+
+	if (strcmp(description_text, "") == 0 || strcmp(description_text, bug_report_preview_text_md) == 0) {
+		REMMINA_DEBUG("No text in bug description of bug report data");
+		gchar *markup = RED_TEXT("Failure: Bug Description is required. Please fill out the template.");
+		gtk_label_set_markup(remmina_bug_report_dialog->bug_report_submit_status_label, markup);
+		g_free(markup);
+		g_free(description_text);
+		return;
+	}
+
+	// Build GitHub issue body with system info if requested
+	GString *issue_body = g_string_new(description_text);
+	g_free(description_text);
+
+	gboolean include_system_info = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(remmina_bug_report_dialog->bug_report_include_system_info_check_button));
+	if (include_system_info) {
+		JsonNode *system_info = remmina_info_stats_get_all();
+		if (system_info) {
+			JsonGenerator *g = json_generator_new();
+			json_generator_set_root(g, system_info);
+			json_generator_set_pretty(g, TRUE);
+			gchar *system_info_str = json_generator_to_data(g, NULL);
+			g_string_append_printf(issue_body, "\n\n## System Information\n\n```json\n%s\n```\n", system_info_str);
+			g_free(system_info_str);
+			g_object_unref(g);
+			json_node_unref(system_info);
 		}
 	}
 
-	g = json_generator_new();
-	json_generator_set_root(g, bug_report_data);
-	b = json_generator_to_data(g, NULL);
-	g_object_unref(g);
+	// Copy to clipboard for easy pasting
+	GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+	gchar *clipboard_text = g_strdup_printf("**Reporter:** %s\n**Email:** %s\n\n%s", name, email, issue_body->str);
+	gtk_clipboard_set_text(clipboard, clipboard_text, -1);
+	g_free(clipboard_text);
 
-	remmina_curl_compose_message(b, "POST", BUG_REPORT_UPLOAD_URL, remmina_bug_report_dialog->bug_report_submit_status_label);
-	json_node_unref(bug_report_data);
+	// URL encode the title for GitHub
+	gchar *encoded_title = g_uri_escape_string(title, NULL, FALSE);
+	gchar *github_url = g_strdup_printf("%s?title=%s", BUG_REPORT_UPLOAD_URL, encoded_title);
+	g_free(encoded_title);
+
+	// Open GitHub issues page
+	if (!gtk_show_uri_on_window(GTK_WINDOW(remmina_bug_report_dialog->dialog), github_url, GDK_CURRENT_TIME, &error)) {
+		REMMINA_DEBUG("Failed to open GitHub issues page: %s", error ? error->message : "unknown error");
+		gchar *markup = RED_TEXT("Failure: Could not open GitHub. Please visit https://github.com/ultrasardine/multi-remmina/issues manually.");
+		gtk_label_set_markup(remmina_bug_report_dialog->bug_report_submit_status_label, markup);
+		g_free(markup);
+		if (error) g_error_free(error);
+	} else {
+		gchar *markup = GREEN_TEXT("Success: GitHub Issues opened. Your bug report details have been copied to clipboard.");
+		gtk_label_set_markup(remmina_bug_report_dialog->bug_report_submit_status_label, markup);
+		g_free(markup);
+	}
+
+	g_free(github_url);
+	g_string_free(issue_body, TRUE);
 }
 
 JsonNode *remmina_bug_report_get_all(void)

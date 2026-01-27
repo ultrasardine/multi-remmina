@@ -44,7 +44,7 @@
  * 			For the communication between Remmina and Python the python module called 'remmina' is initialized and
  * 			loaded into the environment of the plugin script (@see python_wrapper_module.c).
  *
- * 			@see http://www.remmina.org/wp for more information.
+ * 			@see https://github.com/ultrasardine/multi-remmina for more information.
  */
 
 #pragma once

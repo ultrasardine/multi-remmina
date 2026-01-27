@@ -41,8 +41,9 @@
 #include "json-glib/json-glib.h"
 
 
-#define DOWNLOAD_URL "https://plugins.remmina.org/plugins/plugin_download"
-#define LIST_URL "https://plugins.remmina.org/plugins/get_list"
+/* Plugin download functionality is not available in Multi-Remmina */
+#define DOWNLOAD_URL "https://github.com/ultrasardine/multi-remmina"
+#define LIST_URL "https://github.com/ultrasardine/multi-remmina"
 
 #define ON_DOWNLOAD 1
 #define ON_CLOSE 2

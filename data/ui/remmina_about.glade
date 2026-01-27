@@ -32,13 +32,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
     <property name="title" translatable="yes">About</property>
     <property name="modal">True</property>
     <property name="type-hint">dialog</property>
-    <property name="program-name">Remmina</property>
-    <property name="copyright" translatable="yes">Copyright © 2023–2024 Hiroyuki Tanaka, Sunil Bhat
+    <property name="program-name">Multi-Remmina</property>
+    <property name="copyright" translatable="yes">Copyright © 2025–2026 Multi-Remmina Contributors
+Based on Remmina:
+Copyright © 2023–2024 Hiroyuki Tanaka, Sunil Bhat
 Copyright © 2014–2023 Antenore Gatta, Giovanni Panozzo
 Copyright © 2009–2014 Vic Lee
 More details in COPYING</property>
-    <property name="website">https://www.remmina.org/</property>
-    <property name="website-label" translatable="yes">https://www.remmina.org/</property>
+    <property name="website">https://github.com/ultrasardine/multi-remmina</property>
+    <property name="website-label" translatable="yes">https://github.com/ultrasardine/multi-remmina</property>
     <property name="authors">Antenore Gatta (tmow) &lt;antenore@simbiosi.org&gt;
         Antenore Gatta &lt;antenore@simbiosi.org&gt;
         Hosted Weblate &lt;hosted@weblate.org&gt;

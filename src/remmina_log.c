@@ -156,7 +156,7 @@ void remmina_log_start(void)
 	remmina_log_print(_("This window can help you find connection problems.\n"
 		"You can stop and start the logging at any moment using the On/Off switch.\n"
 		"The stats button (Ctrl+T), can be useful to gather system info you may share when reporting a bug.\n"
-		"There is more info about debugging Remmina on https://gitlab.com/Remmina/Remmina/-/wikis/Usage/Remmina-debugging\n"
+		"There is more info about debugging Multi-Remmina on https://github.com/ultrasardine/multi-remmina/wiki\n"
 		));
 }
 

@@ -453,7 +453,7 @@ static void remmina_plugin_www_init(RemminaProtocolWidget *gp)
 	if (remmina_plugin_service->file_get_string(remminafile, "server"))
 		gpdata->url = g_strdup(remmina_plugin_service->file_get_string(remminafile, "server"));
 	else
-		gpdata->url = "https://remmina.org";
+		gpdata->url = "https://github.com/ultrasardine/multi-remmina";
 	REMMINA_PLUGIN_DEBUG("URL is set to %s", gpdata->url);
 
 	gpdata->settings = webkit_settings_new();

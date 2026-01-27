@@ -90,7 +90,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
                         <property name="label" translatable="yes">&lt;big&gt;&lt;b&gt;The news failed to load&lt;/b&gt;&lt;/big&gt;
 
 &lt;span&gt;
-&lt;a href="https://gitlab.com/Remmina/Remmina/-/tags/" title="Remmina release notes"&gt;&lt;i&gt;Visit the website to read the release notes&lt;/i&gt;&lt;/a&gt;.
+&lt;a href="https://github.com/ultrasardine/multi-remmina/releases" title="Multi-Remmina release notes"&gt;&lt;i&gt;Visit the website to read the release notes&lt;/i&gt;&lt;/a&gt;.
 &lt;/span&gt;</property>
                         <property name="use-markup">True</property>
                         <property name="wrap">True</property>

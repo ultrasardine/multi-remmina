@@ -132,7 +132,7 @@
  *  - Protocols used
  *  - Last time each protocol has been used (globally).
  *
- * @see https://www.remmina.org for more info.
+ * @see https://github.com/ultrasardine/multi-remmina for more info.
  */
 
 #include "config.h"
@@ -191,8 +191,9 @@ struct ProfilesData {
 #define INFO_PERIODIC_CHECK_1ST_MS 1000
 #define INFO_PERIODIC_CHECK_INTERVAL_MS 86400000
 
-#define PERIODIC_UPLOAD_URL "https://info.remmina.org/info/upload_stats"
-#define INFO_REQUEST_URL "https://info.remmina.org/info/handshake"
+/* Stats collection is disabled in Multi-Remmina - these URLs are kept for reference only */
+#define PERIODIC_UPLOAD_URL "https://github.com/ultrasardine/multi-remmina"
+#define INFO_REQUEST_URL "https://github.com/ultrasardine/multi-remmina"
 
  
 static RemminaInfoDialog *remmina_info_dialog;

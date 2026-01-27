@@ -784,7 +784,7 @@ static BOOL remmina_rdp_post_connect(freerdp *instance)
 	case 32:
 		/** Do not use alpha as it's not used with the desktop
 		 * CAIRO_FORMAT_ARGB32
-		 * See https://gitlab.com/Remmina/Remmina/-/issues/2456
+		 * See https://github.com/ultrasardine/multi-remmina/issues
 		 */
 		REMMINA_PLUGIN_DEBUG("CAIRO_FORMAT_RGB24");
 		freerdp_local_color_format = PIXEL_FORMAT_BGRA32;

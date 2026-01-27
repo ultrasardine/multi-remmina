@@ -76,7 +76,7 @@
  * Constants to workaround FreeRDP issue #5417 (min resolution in AVC mode)
  * Must be 4 aligned (multiple of 4).
  * We should instead check destRect and be sure the condition is met
- * See https://gitlab.com/Remmina/Remmina/-/issues/2507 for a deep discussion
+ * See https://github.com/ultrasardine/multi-remmina/issues for a deep discussion
  */
 #define AVC_MIN_DESKTOP_WIDTH 644
 #define AVC_MIN_DESKTOP_HEIGHT 480

@@ -1500,25 +1500,25 @@ void remmina_main_on_action_application_dark_theme(GSimpleAction *action, GVaria
 void remmina_main_on_action_help_homepage(GSimpleAction *action, GVariant *param, gpointer data)
 {
 	TRACE_CALL(__func__);
-	g_app_info_launch_default_for_uri("https://www.remmina.org", NULL, NULL);
+	g_app_info_launch_default_for_uri("https://github.com/ultrasardine/multi-remmina", NULL, NULL);
 }
 
 void remmina_main_on_action_help_wiki(GSimpleAction *action, GVariant *param, gpointer data)
 {
 	TRACE_CALL(__func__);
-	g_app_info_launch_default_for_uri("https://gitlab.com/Remmina/Remmina/wikis/home", NULL, NULL);
+	g_app_info_launch_default_for_uri("https://github.com/ultrasardine/multi-remmina/wiki", NULL, NULL);
 }
 
 void remmina_main_on_action_help_community(GSimpleAction *action, GVariant *param, gpointer data)
 {
 	TRACE_CALL(__func__);
-	g_app_info_launch_default_for_uri("https://remmina.org/community", NULL, NULL);
+	g_app_info_launch_default_for_uri("https://github.com/ultrasardine/multi-remmina/discussions", NULL, NULL);
 }
 
 void remmina_main_on_action_help_donations(GSimpleAction *action, GVariant *param, gpointer data)
 {
 	TRACE_CALL(__func__);
-	g_app_info_launch_default_for_uri("https://www.remmina.org/donations", NULL, NULL);
+	g_app_info_launch_default_for_uri("https://github.com/sponsors/ultrasardine", NULL, NULL);
 }
 
 void remmina_main_on_action_help_debug(GSimpleAction *action, GVariant *param, gpointer data)

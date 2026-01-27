@@ -981,7 +981,7 @@ remmina_plugin_terminal_close_connection(RemminaProtocolWidget *gp)
  *
  * @see remmina_plugin_ssh_popup_ui
  * @see RemminaProtocolWidget
- * @see https://gitlab.com/Remmina/Remmina/wikis/Remmina-SSH-Terminal-colour-schemes
+ * @see https://github.com/ultrasardine/multi-remmina/wiki/SSH-Terminal-colour-schemes
  */
 static void
 remmina_plugin_ssh_terminal_init(RemminaProtocolWidget *gp, gboolean is_terminal)
