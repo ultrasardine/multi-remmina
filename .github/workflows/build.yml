@@ -237,11 +237,17 @@ jobs:
     
     - name: Configure CMake
       run: |
+        # Get FreeRDP paths from Homebrew
+        FREERDP_PREFIX=$(brew --prefix freerdp)
+        
         cmake -B build \
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
           -DCMAKE_INSTALL_PREFIX=/usr/local \
-          -DCMAKE_PREFIX_PATH="$(brew --prefix)" \
+          -DCMAKE_PREFIX_PATH="$(brew --prefix);${FREERDP_PREFIX}" \
           -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)" \
+          -DFreeRDP_DIR="${FREERDP_PREFIX}/lib/cmake/FreeRDP3" \
+          -DFreeRDP-Client_DIR="${FREERDP_PREFIX}/lib/cmake/FreeRDP-Client3" \
+          -DWinPR_DIR="${FREERDP_PREFIX}/lib/cmake/WinPR3" \
           -DWITH_AVAHI=OFF \
           -DWITH_APPINDICATOR=OFF \
           -DWITH_TELEPATHY=OFF \
@@ -256,7 +262,12 @@ jobs:
           -DWITH_STATS=OFF
     
     - name: Build
-      run: cmake --build build --config ${{env.BUILD_TYPE}} -j$(sysctl -n hw.ncpu)
+      run: |
+        cmake --build build --config ${{env.BUILD_TYPE}} -j$(sysctl -n hw.ncpu)
+        
+        echo "=== Checking what plugins were built ==="
+        find build/plugins -name "*.so" -o -name "*.dylib"
+        echo "=== Plugin build complete ==="
     
     - name: Generate version
       id: version
@@ -363,6 +374,18 @@ jobs:
           -d Multi-Remmina.app/Contents/Frameworks \
           -p @executable_path/../Frameworks \
           || echo "dylibbundler completed with warnings"
+        
+        # Also bundle plugin dependencies
+        for plugin in Multi-Remmina.app/Contents/Resources/lib/multi-remmina/plugins/*.so; do
+          if [ -f "$plugin" ]; then
+            echo "Bundling dependencies for: $plugin"
+            dylibbundler -od -b \
+              -x "$plugin" \
+              -d Multi-Remmina.app/Contents/Frameworks \
+              -p @executable_path/../Frameworks \
+              || echo "dylibbundler warning for $plugin"
+          fi
+        done
         
         # Remove quarantine attributes (helps with Gatekeeper)
         xattr -cr Multi-Remmina.app || true
