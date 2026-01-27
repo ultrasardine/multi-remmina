@@ -2,9 +2,9 @@ name: Build and Test
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ master, main, dev ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ master, main, dev ]
   workflow_dispatch:
 
 env:
@@ -69,28 +69,37 @@ jobs:
     - name: Generate version
       id: version
       run: |
-        # Use CalVer: YYYY.M.PATCH (same as release job)
-        YEAR=$(date +%Y)
-        MONTH=$(date +%-m)
+        BRANCH="${{ github.ref_name }}"
         
-        # Find the latest tag for this month
-        LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
-        
-        if [ -z "$LATEST_TAG" ]; then
-          # First release this month
-          PATCH=0
+        if [ "$BRANCH" = "dev" ]; then
+          # Dev versioning: YYYY-M-BUILD_NUMBER-dev
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          BUILD_NUMBER=${{ github.run_number }}
+          VERSION="${YEAR}-${MONTH}-${BUILD_NUMBER}-dev"
         else
-          # Increment patch version
-          PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
-          PATCH=$((PATCH + 1))
+          # Stable versioning: YYYY.M.PATCH (CalVer)
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          
+          # Find the latest tag for this month
+          LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            PATCH=0
+          else
+            PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
+            PATCH=$((PATCH + 1))
+          fi
+          
+          VERSION="${YEAR}.${MONTH}.${PATCH}"
         fi
         
-        VERSION="${YEAR}.${MONTH}.${PATCH}"
         SHORT_SHA=$(git rev-parse --short HEAD)
         
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
-        echo "Generated version: $VERSION"
+        echo "Generated version for $BRANCH: $VERSION"
     
     - name: Run tests
       working-directory: build
@@ -254,6 +263,7 @@ jobs:
           -DWITH_VTE=OFF \
           -DWITH_WWW=OFF \
           -DWITH_FREERDP=ON \
+          -DWITH_FREERDP3=ON \
           -DWITH_SPICE=OFF \
           -DWITH_X2GO=OFF \
           -DWITH_PYTHONLIBS=OFF \
@@ -272,28 +282,37 @@ jobs:
     - name: Generate version
       id: version
       run: |
-        # Use CalVer: YYYY.M.PATCH (same as release job)
-        YEAR=$(date +%Y)
-        MONTH=$(date +%-m)
+        BRANCH="${{ github.ref_name }}"
         
-        # Find the latest tag for this month
-        LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
-        
-        if [ -z "$LATEST_TAG" ]; then
-          # First release this month
-          PATCH=0
+        if [ "$BRANCH" = "dev" ]; then
+          # Dev versioning: YYYY-M-BUILD_NUMBER-dev
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          BUILD_NUMBER=${{ github.run_number }}
+          VERSION="${YEAR}-${MONTH}-${BUILD_NUMBER}-dev"
         else
-          # Increment patch version
-          PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
-          PATCH=$((PATCH + 1))
+          # Stable versioning: YYYY.M.PATCH (CalVer)
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          
+          # Find the latest tag for this month
+          LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            PATCH=0
+          else
+            PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
+            PATCH=$((PATCH + 1))
+          fi
+          
+          VERSION="${YEAR}.${MONTH}.${PATCH}"
         fi
         
-        VERSION="${YEAR}.${MONTH}.${PATCH}"
         SHORT_SHA=$(git rev-parse --short HEAD)
         
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
-        echo "Generated version: $VERSION"
+        echo "Generated version for $BRANCH: $VERSION"
     
     - name: Run tests
       working-directory: build
@@ -365,27 +384,57 @@ jobs:
         echo "Icon created successfully:"
         ls -lh Multi-Remmina.app/Contents/Resources/AppIcon.icns
         
-        # Bundle all Homebrew dependencies using dylibbundler
-        brew install dylibbundler
+        # Bundle all Homebrew dependencies manually (more reliable than dylibbundler)
+        echo "=== Bundling Homebrew dependencies ==="
         
-        # Bundle dependencies into Frameworks
-        dylibbundler -od -b \
-          -x Multi-Remmina.app/Contents/MacOS/multi-remmina \
-          -d Multi-Remmina.app/Contents/Frameworks \
-          -p @executable_path/../Frameworks \
-          || echo "dylibbundler completed with warnings"
+        # Function to recursively copy dependencies
+        bundle_deps() {
+          local binary="$1"
+          echo "Processing: $binary"
+          
+          # Get all dependencies
+          otool -L "$binary" | grep -E "$(brew --prefix)" | awk '{print $1}' | while read dep; do
+            # Get just the library name
+            libname=$(basename "$dep")
+            target="Multi-Remmina.app/Contents/Frameworks/$libname"
+            
+            # Copy if not already present
+            if [ ! -f "$target" ]; then
+              echo "  Copying: $libname"
+              cp "$dep" "$target" 2>/dev/null || true
+              chmod +w "$target" 2>/dev/null || true
+              
+              # Fix the library's own ID
+              install_name_tool -id "@executable_path/../Frameworks/$libname" "$target" 2>/dev/null || true
+              
+              # Recursively process this library's dependencies
+              bundle_deps "$target"
+            fi
+            
+            # Update reference in the binary
+            install_name_tool -change "$dep" "@executable_path/../Frameworks/$libname" "$binary" 2>/dev/null || true
+          done
+        }
         
-        # Also bundle plugin dependencies
+        # Bundle main binary dependencies
+        echo "Bundling main binary dependencies..."
+        bundle_deps "Multi-Remmina.app/Contents/MacOS/multi-remmina"
+        
+        # Bundle plugin dependencies
+        echo "Bundling plugin dependencies..."
         for plugin in Multi-Remmina.app/Contents/Resources/lib/multi-remmina/plugins/*.so; do
           if [ -f "$plugin" ]; then
-            echo "Bundling dependencies for: $plugin"
-            dylibbundler -od -b \
-              -x "$plugin" \
-              -d Multi-Remmina.app/Contents/Frameworks \
-              -p @executable_path/../Frameworks \
-              || echo "dylibbundler warning for $plugin"
+            echo "Processing plugin: $(basename $plugin)"
+            bundle_deps "$plugin"
+            
+            # Fix plugin rpath to find Frameworks
+            install_name_tool -add_rpath "@executable_path/../../../../Frameworks" "$plugin" 2>/dev/null || true
           fi
         done
+        
+        echo "=== Dependency bundling complete ==="
+        echo "Bundled libraries:"
+        ls -lh Multi-Remmina.app/Contents/Frameworks/ | head -20
         
         # Remove quarantine attributes (helps with Gatekeeper)
         xattr -cr Multi-Remmina.app || true
