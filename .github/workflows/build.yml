@@ -407,6 +407,9 @@ jobs:
               # Fix the library's own ID
               install_name_tool -id "@executable_path/../Frameworks/$libname" "$target" 2>/dev/null || true
               
+              # Ad-hoc sign the library (required on macOS to avoid code signature errors)
+              codesign --force --sign - "$target" 2>/dev/null || true
+              
               # Recursively process this library's dependencies
               bundle_deps "$target"
             fi
@@ -420,6 +423,9 @@ jobs:
         echo "Bundling main binary dependencies..."
         bundle_deps "Multi-Remmina.app/Contents/MacOS/multi-remmina"
         
+        # Ad-hoc sign the main binary
+        codesign --force --sign - Multi-Remmina.app/Contents/MacOS/multi-remmina 2>/dev/null || true
+        
         # Bundle plugin dependencies
         echo "Bundling plugin dependencies..."
         for plugin in Multi-Remmina.app/Contents/Resources/lib/multi-remmina/plugins/*.so; do
@@ -429,11 +435,25 @@ jobs:
             
             # Fix plugin rpath to find Frameworks
             install_name_tool -add_rpath "@executable_path/../../../../Frameworks" "$plugin" 2>/dev/null || true
+            
+            # Ad-hoc sign the plugin
+            codesign --force --sign - "$plugin" 2>/dev/null || true
+          fi
+        done
+        
+        # Sign all frameworks
+        echo "Signing all frameworks..."
+        for lib in Multi-Remmina.app/Contents/Frameworks/*; do
+          if [ -f "$lib" ]; then
+            codesign --force --sign - "$lib" 2>/dev/null || true
           fi
         done
         
         echo "=== Dependency bundling complete ==="
         echo "Bundled libraries:"
+        ls -lh Multi-Remmina.app/Contents/Frameworks/ | head -20
+        
+        # Remove quarantine attributes (helps with Gatekeeper)
         ls -lh Multi-Remmina.app/Contents/Frameworks/ | head -20
         
         # Remove quarantine attributes (helps with Gatekeeper)
