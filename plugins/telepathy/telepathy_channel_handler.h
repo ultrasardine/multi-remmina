@@ -33,6 +33,9 @@
  *
  */
 
+/* Telepathy is not supported on Windows - Linux-specific communication framework */
+#ifndef _WIN32
+
 #pragma once
 
 G_BEGIN_DECLS
@@ -41,3 +44,5 @@ void
 remmina_tp_channel_handler_new(const gchar *account_path, const gchar *connection_path, const gchar *channel_path, GHashTable *channel_properties, DBusGMethodInvocation *context);
 
 G_END_DECLS
+
+#endif /* _WIN32 */

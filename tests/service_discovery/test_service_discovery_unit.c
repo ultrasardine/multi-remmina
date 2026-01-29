@@ -32,13 +32,30 @@
  *
  */
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN32)
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <glib.h>
+
+#ifdef __APPLE__
 #include "../../src/remmina_bonjour_macos.h"
+#define PLATFORM_NAME "macOS"
+#define service_discovery_init remmina_service_discovery_init
+#define service_discovery_browse remmina_service_discovery_browse
+#define service_discovery_stop remmina_service_discovery_stop
+typedef RemminaServiceCallback ServiceCallback;
+#elif defined(_WIN32)
+#include "../../src/remmina_dnssd_windows.h"
+#define PLATFORM_NAME "Windows"
+#define service_discovery_init remmina_dnssd_windows_init
+#define service_discovery_browse remmina_dnssd_windows_browse
+#define service_discovery_stop remmina_dnssd_windows_stop
+#define service_discovery_is_available remmina_dnssd_windows_is_available
+#define service_discovery_cleanup remmina_dnssd_windows_cleanup
+typedef RemminaDnssdCallback ServiceCallback;
+#endif
 
 /* Test counter */
 static gint tests_passed = 0;
@@ -60,14 +77,20 @@ static void run_test(const gchar *name, gboolean (*test_func)(void))
 /* Test: Initialization succeeds */
 static gboolean test_init_succeeds(void)
 {
-	return remmina_service_discovery_init();
+#ifdef _WIN32
+	if (!service_discovery_is_available()) {
+		g_print("(DNS-SD not available, skipping) ");
+		return TRUE;
+	}
+#endif
+	return service_discovery_init();
 }
 
 /* Test: Browse with NULL service type fails gracefully */
 static gboolean test_browse_null_service_type(void)
 {
 	/* Should return FALSE for NULL service type */
-	gboolean result = remmina_service_discovery_browse(NULL, NULL, NULL);
+	gboolean result = service_discovery_browse(NULL, NULL, NULL);
 	return !result; /* Test passes if browse returns FALSE */
 }
 
@@ -75,7 +98,7 @@ static gboolean test_browse_null_service_type(void)
 static gboolean test_browse_null_callback(void)
 {
 	/* Should return FALSE for NULL callback */
-	gboolean result = remmina_service_discovery_browse("_rfb._tcp", NULL, NULL);
+	gboolean result = service_discovery_browse("_rfb._tcp", NULL, NULL);
 	return !result; /* Test passes if browse returns FALSE */
 }
 
@@ -91,16 +114,23 @@ static void dummy_callback(const gchar *service_name,
 /* Test: Browse with valid parameters succeeds */
 static gboolean test_browse_valid_parameters(void)
 {
-	if (!remmina_service_discovery_init()) {
+#ifdef _WIN32
+	if (!service_discovery_is_available()) {
+		g_print("(DNS-SD not available, skipping) ");
+		return TRUE;
+	}
+#endif
+	
+	if (!service_discovery_init()) {
 		return FALSE;
 	}
 	
-	gboolean result = remmina_service_discovery_browse("_rfb._tcp", 
-							    dummy_callback, 
-							    NULL);
+	gboolean result = service_discovery_browse("_rfb._tcp", 
+						    dummy_callback, 
+						    NULL);
 	
 	/* Clean up */
-	remmina_service_discovery_stop();
+	service_discovery_stop();
 	
 	return result;
 }
@@ -108,30 +138,37 @@ static gboolean test_browse_valid_parameters(void)
 /* Test: Multiple browse operations can coexist */
 static gboolean test_multiple_browse_operations(void)
 {
-	if (!remmina_service_discovery_init()) {
+#ifdef _WIN32
+	if (!service_discovery_is_available()) {
+		g_print("(DNS-SD not available, skipping) ");
+		return TRUE;
+	}
+#endif
+	
+	if (!service_discovery_init()) {
 		return FALSE;
 	}
 	
 	/* Start browsing for VNC */
-	gboolean result1 = remmina_service_discovery_browse("_rfb._tcp", 
-							     dummy_callback, 
-							     NULL);
+	gboolean result1 = service_discovery_browse("_rfb._tcp", 
+						     dummy_callback, 
+						     NULL);
 	if (!result1) {
-		remmina_service_discovery_stop();
+		service_discovery_stop();
 		return FALSE;
 	}
 	
 	/* Start browsing for SSH */
-	gboolean result2 = remmina_service_discovery_browse("_ssh._tcp", 
-							     dummy_callback, 
-							     NULL);
+	gboolean result2 = service_discovery_browse("_ssh._tcp", 
+						     dummy_callback, 
+						     NULL);
 	if (!result2) {
-		remmina_service_discovery_stop();
+		service_discovery_stop();
 		return FALSE;
 	}
 	
 	/* Clean up */
-	remmina_service_discovery_stop();
+	service_discovery_stop();
 	
 	return TRUE;
 }
@@ -140,22 +177,29 @@ static gboolean test_multiple_browse_operations(void)
 static gboolean test_stop_without_init(void)
 {
 	/* Should not crash */
-	remmina_service_discovery_stop();
+	service_discovery_stop();
 	return TRUE;
 }
 
 /* Test: Stop after stop is safe */
 static gboolean test_stop_after_stop(void)
 {
-	if (!remmina_service_discovery_init()) {
+#ifdef _WIN32
+	if (!service_discovery_is_available()) {
+		g_print("(DNS-SD not available, skipping) ");
+		return TRUE;
+	}
+#endif
+	
+	if (!service_discovery_init()) {
 		return FALSE;
 	}
 	
-	remmina_service_discovery_browse("_rfb._tcp", dummy_callback, NULL);
+	service_discovery_browse("_rfb._tcp", dummy_callback, NULL);
 	
 	/* Stop twice */
-	remmina_service_discovery_stop();
-	remmina_service_discovery_stop();
+	service_discovery_stop();
+	service_discovery_stop();
 	
 	return TRUE;
 }
@@ -163,27 +207,42 @@ static gboolean test_stop_after_stop(void)
 /* Test: Browse with invalid service type format */
 static gboolean test_browse_invalid_service_type(void)
 {
-	if (!remmina_service_discovery_init()) {
+#ifdef _WIN32
+	if (!service_discovery_is_available()) {
+		g_print("(DNS-SD not available, skipping) ");
+		return TRUE;
+	}
+#endif
+	
+	if (!service_discovery_init()) {
 		return FALSE;
 	}
 	
 	/* Try browsing with invalid service type */
-	/* Bonjour should handle this gracefully */
-	gboolean result = remmina_service_discovery_browse("invalid_service", 
-							    dummy_callback, 
-							    NULL);
+	/* DNS-SD should handle this gracefully */
+	gboolean result = service_discovery_browse("invalid_service", 
+						    dummy_callback, 
+						    NULL);
 	
 	/* Clean up */
-	remmina_service_discovery_stop();
+	service_discovery_stop();
 	
 	/* Test passes regardless of result - we just verify no crash */
 	return TRUE;
 }
 
-/* Test: Fallback to manual entry when Bonjour unavailable */
-/* Note: This is more of a documentation test since Bonjour is always available on macOS */
+/* Test: Fallback to manual entry when DNS-SD unavailable */
 static gboolean test_fallback_to_manual_entry(void)
 {
+#ifdef _WIN32
+	/* On Windows, DNS-SD may not be available on older versions */
+	if (!service_discovery_is_available()) {
+		g_print("\n  Note: DNS-SD not available on this Windows version. ");
+		g_print("Application should provide manual hostname entry.\n  ");
+		return TRUE;
+	}
+#endif
+	
 	/* On macOS, Bonjour is always available */
 	/* This test documents that the application should provide manual entry */
 	/* as a fallback when service discovery returns no results */
@@ -209,21 +268,51 @@ static gboolean test_service_resolution_timeout(void)
 }
 
 /* Test: Invalid service data handling */
-/* Note: Bonjour API handles invalid data internally */
 static gboolean test_invalid_service_data(void)
 {
+#ifdef _WIN32
+	/* Windows DNS-SD APIs handle invalid data by returning error codes */
+	g_print("\n  Note: Invalid service data is handled by checking ");
+	g_print("DNS_STATUS error codes\n  ");
+#else
 	/* Bonjour's DNSServiceBrowse and DNSServiceResolve handle invalid data */
 	/* by returning error codes, which our implementation checks */
-	
 	g_print("\n  Note: Invalid service data is handled by checking ");
 	g_print("DNSServiceErrorType\n  ");
+#endif
 	
 	return TRUE;
 }
 
+#ifdef _WIN32
+/* Windows-specific test: Check DNS-SD availability */
+static gboolean test_dnssd_availability_check(void)
+{
+	/* This test verifies that the availability check works */
+	gboolean available = service_discovery_is_available();
+	
+	if (available) {
+		g_print("\n  DNS-SD is available on this Windows version\n  ");
+	} else {
+		g_print("\n  DNS-SD is NOT available (requires Windows 10 1803+)\n  ");
+	}
+	
+	/* Test passes regardless - we just verify the check doesn't crash */
+	return TRUE;
+}
+
+/* Windows-specific test: Cleanup is safe */
+static gboolean test_cleanup_is_safe(void)
+{
+	/* Should not crash even if not initialized */
+	service_discovery_cleanup();
+	return TRUE;
+}
+#endif
+
 int main(int argc, char *argv[])
 {
-	g_print("=== Service Discovery Unit Tests ===\n\n");
+	g_print("=== Service Discovery Unit Tests (%s) ===\n\n", PLATFORM_NAME);
 	
 	/* Basic functionality tests */
 	run_test("Initialization succeeds", test_init_succeeds);
@@ -237,10 +326,16 @@ int main(int argc, char *argv[])
 	run_test("Stop after stop is safe", test_stop_after_stop);
 	run_test("Browse with invalid service type format", test_browse_invalid_service_type);
 	
-	/* Requirement 11.4 tests */
-	run_test("Fallback to manual entry when Bonjour unavailable", test_fallback_to_manual_entry);
+	/* Requirement 7.4 tests (Windows) / 11.4 tests (macOS) */
+	run_test("Fallback to manual entry when DNS-SD unavailable", test_fallback_to_manual_entry);
 	run_test("Service resolution timeout handling", test_service_resolution_timeout);
 	run_test("Invalid service data handling", test_invalid_service_data);
+	
+#ifdef _WIN32
+	/* Windows-specific tests */
+	run_test("DNS-SD availability check", test_dnssd_availability_check);
+	run_test("Cleanup is safe", test_cleanup_is_safe);
+#endif
 	
 	/* Print summary */
 	g_print("\n=== Test Summary ===\n");
@@ -262,8 +357,8 @@ int main(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-	printf("Service discovery unit tests are only available on macOS\n");
+	printf("Service discovery unit tests are only available on macOS and Windows\n");
 	return 0;
 }
 
-#endif /* __APPLE__ */
+#endif /* __APPLE__ || _WIN32 */

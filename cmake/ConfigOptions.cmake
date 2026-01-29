@@ -30,4 +30,21 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "sparc")
 	set(TARGET_ARCH "sparc")
 endif()
 
+# Windows-specific architecture detection
+if(WIN32)
+	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+		set(TARGET_ARCH "x64")
+		message(STATUS "Windows 64-bit architecture detected")
+	else()
+		set(TARGET_ARCH "x86")
+		message(STATUS "Windows 32-bit architecture detected")
+	endif()
+endif()
+
 option(WITH_TRANSLATIONS "Generate translations." ON)
+
+# Windows-specific options
+if(WIN32)
+	option(WITH_WINDOWS_CREDENTIAL_MANAGER "Enable Windows Credential Manager support" ON)
+	option(WITH_WINDOWS_DNSSD "Enable Windows DNS-SD service discovery" ON)
+endif()

@@ -48,6 +48,9 @@
 #include "remmina_plugin_manager.h"
 #include "remmina_file_manager.h"
 #include "remmina/remmina_trace_calls.h"
+#ifdef _WIN32
+#include "remmina_paths_windows.h"
+#endif
 
 static gchar *remminadir;
 static gchar *cachedir;
@@ -69,6 +72,19 @@ gchar *remmina_file_get_datadir(void)
 		if (g_file_test(remminadir, G_FILE_TEST_IS_DIR))
 			return remminadir;
 	g_free(remminadir), remminadir = NULL;
+
+#ifdef _WIN32
+	/* On Windows, use %LOCALAPPDATA%\multi-remmina for data storage */
+	remminadir = remmina_paths_get_data_dir();
+	if (remminadir != NULL) {
+		if (g_file_test(remminadir, G_FILE_TEST_IS_DIR))
+			return remminadir;
+		/* Directory doesn't exist yet, but path is valid - return it anyway */
+		return remminadir;
+	}
+	g_free(remminadir), remminadir = NULL;
+#endif
+
 	/* Legacy ~/.remmina */
 	remminadir = g_build_path("/", g_get_home_dir(), dir, NULL);
 	if (g_file_test(remminadir, G_FILE_TEST_IS_DIR))
@@ -121,11 +137,35 @@ void remmina_file_manager_init(void)
 	const gchar *legacy = ".remmina";
 	const gchar *filename;
 	int i;
+	gchar *target_data_dir = NULL;
+
+#ifdef _WIN32
+	/* On Windows, use %LOCALAPPDATA%\multi-remmina for data storage */
+	target_data_dir = remmina_paths_get_data_dir();
+	if (target_data_dir != NULL) {
+		if (g_mkdir_with_parents(target_data_dir, 0750) == 0) {
+			REMMINA_DEBUG("Initialized the \"%s\" data folder", target_data_dir);
+		} else {
+			REMMINA_CRITICAL("Cannot create the \"%s\" data folder", target_data_dir);
+		}
+	}
+	
+	/* Create the cache directory on Windows */
+	cachedir = g_build_path("\\", g_get_user_cache_dir(), "multi-remmina", NULL);
+	g_mkdir_with_parents(cachedir, 0750);
+	g_free(cachedir), cachedir = NULL;
+	
+	/* Skip legacy migration on Windows - not applicable */
+	if (target_data_dir != NULL)
+		g_free(target_data_dir);
+	return;
+#endif
 
 	/* Get and create the XDG_DATA_HOME directory */
 	remminadir = remmina_pref_get_value("datadir_path");
 	if (g_mkdir_with_parents(remminadir, 0750) == 0) {
 		REMMINA_DEBUG("Initialized the \"%s\" data folder", remminadir);
+		target_data_dir = g_strdup(remminadir);
 		g_free(remminadir), remminadir = NULL;
 	} else {
 		g_free(remminadir), remminadir = NULL;
@@ -135,6 +175,7 @@ void remmina_file_manager_init(void)
 			REMMINA_DEBUG("Initialized the \"%s\" data folder", remminadir);
 		else
 			REMMINA_CRITICAL("Cannot create the \"%s\" data folder", remminadir);
+		target_data_dir = g_strdup(remminadir);
 		g_free(remminadir), remminadir = NULL;
 	}
 	/* Create the XDG_CACHE_HOME directory */
@@ -148,8 +189,7 @@ void remmina_file_manager_init(void)
 		while ((filename = g_dir_read_name(dir)) != NULL) {
 			remmina_file_manager_do_copy(
 				g_build_path("/", remminadir, filename, NULL),
-				g_build_path("/", g_get_user_data_dir(),
-					     "remmina", filename, NULL));
+				g_build_path("/", target_data_dir, filename, NULL));
 		}
 		g_dir_close(dir);
 	}
@@ -165,8 +205,7 @@ void remmina_file_manager_init(void)
 			while ((filename = g_dir_read_name(dir)) != NULL) {
 				remmina_file_manager_do_copy(
 					g_build_path("/", remminadir, filename, NULL),
-					g_build_path("/", g_get_user_data_dir(),
-						     "remmina", filename, NULL));
+					g_build_path("/", target_data_dir, filename, NULL));
 			}
 		}
 		g_free(remminadir), remminadir = NULL;
@@ -174,6 +213,8 @@ void remmina_file_manager_init(void)
 	/* At last we make sure we use XDG_USER_DATA */
 	if (remminadir != NULL)
 		g_free(remminadir), remminadir = NULL;
+	if (target_data_dir != NULL)
+		g_free(target_data_dir);
 }
 
 gint remmina_file_manager_iterate(GFunc func, gpointer user_data)

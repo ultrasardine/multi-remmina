@@ -32,13 +32,22 @@
  *
  */
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN32)
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <glib.h>
 #include "../../src/remmina_avahi.h"
+
+#ifdef __APPLE__
+#define PLATFORM_NAME "macOS"
+#define BACKEND_NAME "Bonjour"
+#elif defined(_WIN32)
+#include "../../src/remmina_dnssd_windows.h"
+#define PLATFORM_NAME "Windows"
+#define BACKEND_NAME "DNS-SD"
+#endif
 
 /* Test counter */
 static gint tests_passed = 0;
@@ -83,6 +92,13 @@ static gboolean test_avahi_new(void)
 /* Test: Avahi wrapper can start service discovery */
 static gboolean test_avahi_start(void)
 {
+#ifdef _WIN32
+	if (!remmina_dnssd_windows_is_available()) {
+		g_print("(DNS-SD not available, skipping) ");
+		return TRUE;
+	}
+#endif
+	
 	RemminaAvahi *ga = remmina_avahi_new();
 	if (!ga) {
 		return FALSE;
@@ -103,6 +119,13 @@ static gboolean test_avahi_start(void)
 /* Test: Avahi wrapper can stop service discovery */
 static gboolean test_avahi_stop(void)
 {
+#ifdef _WIN32
+	if (!remmina_dnssd_windows_is_available()) {
+		g_print("(DNS-SD not available, skipping) ");
+		return TRUE;
+	}
+#endif
+	
 	RemminaAvahi *ga = remmina_avahi_new();
 	if (!ga) {
 		return FALSE;
@@ -130,6 +153,13 @@ static gboolean test_avahi_stop(void)
 /* Test: Avahi wrapper can be freed safely */
 static gboolean test_avahi_free(void)
 {
+#ifdef _WIN32
+	if (!remmina_dnssd_windows_is_available()) {
+		g_print("(DNS-SD not available, skipping) ");
+		return TRUE;
+	}
+#endif
+	
 	RemminaAvahi *ga = remmina_avahi_new();
 	if (!ga) {
 		return FALSE;
@@ -167,6 +197,13 @@ static gboolean test_avahi_free_null(void)
 /* Test: Avahi wrapper can start multiple times */
 static gboolean test_avahi_start_multiple_times(void)
 {
+#ifdef _WIN32
+	if (!remmina_dnssd_windows_is_available()) {
+		g_print("(DNS-SD not available, skipping) ");
+		return TRUE;
+	}
+#endif
+	
 	RemminaAvahi *ga = remmina_avahi_new();
 	if (!ga) {
 		return FALSE;
@@ -188,6 +225,13 @@ static gboolean test_avahi_start_multiple_times(void)
 /* Test: Avahi wrapper can stop multiple times */
 static gboolean test_avahi_stop_multiple_times(void)
 {
+#ifdef _WIN32
+	if (!remmina_dnssd_windows_is_available()) {
+		g_print("(DNS-SD not available, skipping) ");
+		return TRUE;
+	}
+#endif
+	
 	RemminaAvahi *ga = remmina_avahi_new();
 	if (!ga) {
 		return FALSE;
@@ -207,9 +251,16 @@ static gboolean test_avahi_stop_multiple_times(void)
 	return TRUE;
 }
 
-/* Test: Avahi wrapper integrates with Bonjour */
-static gboolean test_avahi_bonjour_integration(void)
+/* Test: Avahi wrapper integrates with backend */
+static gboolean test_avahi_backend_integration(void)
 {
+#ifdef _WIN32
+	if (!remmina_dnssd_windows_is_available()) {
+		g_print("(DNS-SD not available, skipping) ");
+		return TRUE;
+	}
+#endif
+	
 	RemminaAvahi *ga = remmina_avahi_new();
 	if (!ga) {
 		return FALSE;
@@ -237,7 +288,7 @@ static gboolean test_avahi_bonjour_integration(void)
 
 int main(int argc, char *argv[])
 {
-	g_print("=== Avahi Wrapper Integration Tests ===\n\n");
+	g_print("=== Avahi Wrapper Integration Tests (%s/%s) ===\n\n", PLATFORM_NAME, BACKEND_NAME);
 	
 	/* Basic functionality tests */
 	run_test("Avahi wrapper can be created", test_avahi_new);
@@ -252,7 +303,7 @@ int main(int argc, char *argv[])
 	run_test("Avahi wrapper can stop multiple times", test_avahi_stop_multiple_times);
 	
 	/* Integration test */
-	run_test("Avahi wrapper integrates with Bonjour", test_avahi_bonjour_integration);
+	run_test("Avahi wrapper integrates with " BACKEND_NAME, test_avahi_backend_integration);
 	
 	/* Print summary */
 	g_print("\n=== Test Summary ===\n");
@@ -274,8 +325,8 @@ int main(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-	printf("Avahi wrapper tests are only available on macOS\n");
+	printf("Avahi wrapper tests are only available on macOS and Windows\n");
 	return 0;
 }
 
-#endif /* __APPLE__ */
+#endif /* __APPLE__ || _WIN32 */

@@ -35,7 +35,12 @@
 #ifndef __BACKEND_LIBSECRET_H__
 #define __BACKEND_LIBSECRET_H__
 
-#ifndef __APPLE__
+#if defined(_WIN32)
+/* Windows uses Credential Manager - no additional headers needed here */
+#elif defined(__APPLE__)
+/* macOS uses Keychain - no additional headers needed here */
+#else
+/* Linux uses libsecret */
 #include <libsecret/secret.h>
 #endif
 

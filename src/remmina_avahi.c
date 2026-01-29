@@ -38,7 +38,155 @@
 #include "remmina_avahi.h"
 #include "remmina/remmina_trace_calls.h"
 
-#ifdef __APPLE__
+#ifdef _WIN32
+/* Windows uses DNS-SD APIs from dnsapi.dll */
+#include "remmina_dnssd_windows.h"
+
+/* Structure to hold service discovery state for Windows */
+typedef struct {
+	RemminaAvahi *ga;
+	gchar *service_type;
+} WindowsServiceContext;
+
+/* Free service context */
+static void
+windows_service_context_free(WindowsServiceContext *ctx)
+{
+	if (ctx) {
+		g_free(ctx->service_type);
+		g_free(ctx);
+	}
+}
+
+/* Callback adapter to convert DNS-SD callback to Avahi-style hash table */
+static void
+windows_service_callback_adapter(const gchar *service_name,
+				  const gchar *hostname,
+				  guint16 port,
+				  gpointer user_data)
+{
+	WindowsServiceContext *ctx = (WindowsServiceContext *)user_data;
+	RemminaAvahi *ga = ctx->ga;
+	gchar *key;
+	gchar *value;
+
+	/* Create key in same format as Avahi: "name,type,domain" */
+	key = g_strdup_printf("%s,%s,local", service_name, ctx->service_type);
+	
+	/* Check if already in hash table */
+	if (g_hash_table_lookup(ga->discovered_services, key)) {
+		g_free(key);
+		return;
+	}
+
+	/* Create value in same format as Avahi: "[hostname]:port" */
+	value = g_strdup_printf("[%s]:%i", hostname, port);
+	g_hash_table_insert(ga->discovered_services, key, value);
+	/* key and value will be freed with g_free when the hash table is freed */
+
+	g_print("(remmina-applet dnssd) Added service '%s' (%s)\n", value, ctx->service_type);
+}
+
+RemminaAvahi* remmina_avahi_new(void)
+{
+	TRACE_CALL(__func__);
+	RemminaAvahi* ga;
+
+	ga = g_new0(RemminaAvahi, 1);
+	ga->discovered_services = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	ga->started = FALSE;
+	/* Use priv to store list of service contexts for cleanup */
+	ga->priv = NULL;
+
+	return ga;
+}
+
+void remmina_avahi_start(RemminaAvahi* ga)
+{
+	TRACE_CALL(__func__);
+	WindowsServiceContext *ctx;
+	GSList *contexts = NULL;
+	const gchar *service_types[] = { "_rfb._tcp", "_rdp._tcp", "_ssh._tcp", NULL };
+	gint i;
+
+	if (ga->started)
+		return;
+
+	ga->started = TRUE;
+
+	/* Check if DNS-SD is available on this Windows version */
+	if (!remmina_dnssd_windows_is_available()) {
+		g_warning("DNS-SD service discovery not available on this Windows version");
+		return;
+	}
+
+	/* Initialize Windows DNS-SD service discovery */
+	if (!remmina_dnssd_windows_init()) {
+		g_warning("Failed to initialize Windows DNS-SD service discovery");
+		return;
+	}
+
+	/* Start browsing for multiple service types */
+	for (i = 0; service_types[i] != NULL; i++) {
+		ctx = g_new0(WindowsServiceContext, 1);
+		ctx->ga = ga;
+		ctx->service_type = g_strdup(service_types[i]);
+		
+		if (!remmina_dnssd_windows_browse(service_types[i], 
+						   windows_service_callback_adapter, 
+						   ctx)) {
+			g_warning("Failed to start DNS-SD browsing for %s", service_types[i]);
+			windows_service_context_free(ctx);
+			continue;
+		}
+		
+		/* Store context for cleanup */
+		contexts = g_slist_append(contexts, ctx);
+	}
+
+	/* Store contexts list in priv for cleanup */
+	ga->priv = (RemminaAvahiPriv*)contexts;
+
+	g_print("(remmina-applet dnssd) Started service discovery\n");
+}
+
+void remmina_avahi_stop(RemminaAvahi* ga)
+{
+	TRACE_CALL(__func__);
+	GSList *contexts;
+	
+	if (!ga->started)
+		return;
+
+	g_hash_table_remove_all(ga->discovered_services);
+	
+	/* Stop Windows DNS-SD service discovery */
+	remmina_dnssd_windows_stop();
+	
+	/* Free all service contexts */
+	contexts = (GSList *)ga->priv;
+	g_slist_free_full(contexts, (GDestroyNotify)windows_service_context_free);
+	ga->priv = NULL;
+	
+	ga->started = FALSE;
+}
+
+void remmina_avahi_free(RemminaAvahi* ga)
+{
+	TRACE_CALL(__func__);
+	if (ga == NULL)
+		return;
+
+	remmina_avahi_stop(ga);
+	
+	/* Cleanup Windows DNS-SD resources */
+	remmina_dnssd_windows_cleanup();
+
+	g_hash_table_destroy(ga->discovered_services);
+	g_free(ga);
+}
+
+#elif defined(__APPLE__)
 /* macOS uses Bonjour instead of Avahi */
 #include "remmina_bonjour_macos.h"
 

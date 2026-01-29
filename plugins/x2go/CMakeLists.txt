@@ -44,6 +44,11 @@ add_library(remmina-plugin-x2go MODULE ${REMMINA_PLUGIN_X2GO_SRCS})
 set_target_properties(remmina-plugin-x2go PROPERTIES PREFIX "")
 set_target_properties(remmina-plugin-x2go PROPERTIES NO_SONAME 1)
 
+# Apply Windows-specific plugin configuration
+if(WIN32)
+  configure_windows_plugin(remmina-plugin-x2go)
+endif()
+
 find_package(X11)
 
 include_directories(${REMMINA_COMMON_INCLUDE_DIRS}

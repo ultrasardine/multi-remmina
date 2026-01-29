@@ -31,6 +31,8 @@
 # version. If you delete this exception statement from all source
 # files in the program, then also delete it here.
 
+# Telepathy is not supported on Windows - Linux-specific communication framework
+if(NOT WIN32)
 
 set(REMMINA_PLUGIN_TELEPATHY_SRCS
         telepathy_plugin.c
@@ -64,3 +66,5 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/org.freedesktop.Telepathy.Client.Remm
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.freedesktop.Telepathy.Client.Remmina.service
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/dbus-1/services)
+
+endif() # NOT WIN32

@@ -33,6 +33,9 @@
  *
  */
 
+/* Telepathy is not supported on Windows - Linux-specific communication framework */
+#ifndef _WIN32
+
 #pragma once
 
 G_BEGIN_DECLS
@@ -55,3 +58,5 @@ typedef struct _RemminaTpHandlerClass {
 RemminaTpHandler *remmina_tp_handler_new(void);
 
 G_END_DECLS
+
+#endif /* _WIN32 */

@@ -267,6 +267,12 @@ endif()
 # Figure out no-undefined flag
 if(${CMAKE_SYSTEM_NAME} STREQUAL Darwin)
   set(NO_UNDEFINED_FLAG "-Wl,-undefined,error")
+elseif(WIN32)
+  # Windows linker flags are set in the Windows configuration block above
+  # Use --no-undefined for MinGW to catch missing symbols at link time
+  if(NOT DEFINED NO_UNDEFINED_FLAG)
+    set(NO_UNDEFINED_FLAG "-Wl,--no-undefined")
+  endif()
 elseif((${CMAKE_SYSTEM_NAME} STREQUAL Linux) OR MINGW)
   set(NO_UNDEFINED_FLAG "-Wl,--no-undefined")
 else()
@@ -286,6 +292,14 @@ check_include_files(fcntl.h HAVE_FCNTL_H)
 check_include_files(unistd.h HAVE_UNISTD_H)
 check_include_files(sys/un.h HAVE_SYS_UN_H)
 check_include_files(errno.h HAVE_ERRNO_H)
+
+# Windows-specific header checks
+if(WIN32)
+  check_include_files(winsock2.h HAVE_WINSOCK2_H)
+  check_include_files(ws2tcpip.h HAVE_WS2TCPIP_H)
+  check_include_files(windows.h HAVE_WINDOWS_H)
+  check_include_files(wincred.h HAVE_WINCRED_H)
+endif()
 
 include_directories(.)
 include_directories(src/include)
@@ -374,6 +388,107 @@ if(APPLE)
   message(STATUS "  - Telepathy: OFF (Linux-specific)")
   message(STATUS "  - Keychain: ${WITH_MACOS_KEYCHAIN}")
   message(STATUS "  - RPATH: ${CMAKE_INSTALL_RPATH}")
+endif()
+
+# Windows (MSYS2/MinGW)
+
+if(WIN32)
+  message(STATUS "Configuring for Windows")
+  
+  # Detect MinGW environment
+  if(MINGW)
+    message(STATUS "Using MinGW compiler toolchain")
+    
+    # Add MSYS2/MinGW search paths for dependencies
+    # Support both mingw64 and ucrt64 environments
+    list(APPEND CMAKE_PREFIX_PATH
+      /mingw64
+      /ucrt64
+      /mingw64/lib
+      /ucrt64/lib
+      /mingw64/include
+      /ucrt64/include
+    )
+    
+    # Add MSYS2 include paths
+    include_directories(SYSTEM
+      /mingw64/include
+      /ucrt64/include
+      /mingw64/include/freerdp2
+      /ucrt64/include/freerdp2
+    )
+    
+    # Add MSYS2 library paths
+    link_directories(
+      /mingw64/lib
+      /ucrt64/lib
+    )
+  endif()
+  
+  # Set Windows-specific linker flags
+  # Use --no-undefined to catch missing symbols at link time
+  set(NO_UNDEFINED_FLAG "-Wl,--no-undefined")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${NO_UNDEFINED_FLAG}")
+  
+  # Windows DLL handling
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+  
+  # Set RPATH equivalent for Windows (DLL search paths)
+  # On Windows, DLLs are searched in the executable directory first
+  set(CMAKE_INSTALL_RPATH "")
+  
+  # Disable Linux-specific features on Windows
+  set(WITH_AVAHI OFF CACHE BOOL "Disable Avahi on Windows" FORCE)
+  set(WITH_APPINDICATOR OFF CACHE BOOL "Disable AppIndicator on Windows" FORCE)
+  set(WITH_TELEPATHY OFF CACHE BOOL "Disable Telepathy on Windows" FORCE)
+  set(HAVE_LIBAPPINDICATOR OFF CACHE BOOL "Disable AppIndicator on Windows" FORCE)
+  
+  # Enable Windows-specific features
+  option(WITH_WINDOWS_CREDENTIAL_MANAGER "Enable Windows Credential Manager support" ON)
+  
+  if(WITH_WINDOWS_CREDENTIAL_MANAGER)
+    message(STATUS "Windows Credential Manager support enabled")
+    # Link Advapi32 for Credential Manager APIs (CredWrite, CredRead, CredDelete)
+    find_library(ADVAPI32_LIBRARY advapi32 REQUIRED)
+    if(ADVAPI32_LIBRARY)
+      message(STATUS "Advapi32 library found: ${ADVAPI32_LIBRARY}")
+      add_definitions(-DWITH_WINDOWS_CREDENTIAL_MANAGER)
+    else()
+      message(FATAL_ERROR "Advapi32 library not found - required for Windows Credential Manager support")
+    endif()
+  endif()
+  
+  # Link dnsapi for DNS-SD service discovery
+  option(WITH_WINDOWS_DNSSD "Enable Windows DNS-SD service discovery" ON)
+  if(WITH_WINDOWS_DNSSD)
+    find_library(DNSAPI_LIBRARY dnsapi)
+    if(DNSAPI_LIBRARY)
+      message(STATUS "dnsapi library found: ${DNSAPI_LIBRARY}")
+      add_definitions(-DWITH_WINDOWS_DNSSD)
+    else()
+      message(WARNING "dnsapi library not found - DNS-SD service discovery will be disabled")
+      set(WITH_WINDOWS_DNSSD OFF)
+    endif()
+  endif()
+  
+  # Windows-specific compiler flags
+  if(MINGW)
+    # Enable Unicode support
+    add_definitions(-DUNICODE -D_UNICODE)
+    # Windows version targeting (Windows 7+)
+    add_definitions(-D_WIN32_WINNT=0x0601 -DWINVER=0x0601)
+  endif()
+  
+  message(STATUS "Windows configuration complete:")
+  message(STATUS "  - Avahi: OFF (Linux-specific)")
+  message(STATUS "  - AppIndicator: OFF (Linux-specific)")
+  message(STATUS "  - Telepathy: OFF (Linux-specific)")
+  message(STATUS "  - Credential Manager: ${WITH_WINDOWS_CREDENTIAL_MANAGER}")
+  message(STATUS "  - DNS-SD: ${WITH_WINDOWS_DNSSD}")
+  if(MINGW)
+    message(STATUS "  - Compiler: MinGW")
+    message(STATUS "  - MSYS2 paths: /mingw64, /ucrt64")
+  endif()
 endif()
 
 # Versioning
@@ -627,6 +742,11 @@ if(WITH_TESTS)
     add_subdirectory(tests/bundle_resources)
     add_subdirectory(tests/profile_management)
   endif()
+  if(WIN32)
+    add_subdirectory(tests/credential_manager)
+    add_subdirectory(tests/keychain)
+    add_subdirectory(tests/path_handling)
+  endif()
 else()
   message(STATUS "Unit tests disabled")
 endif()
@@ -647,6 +767,8 @@ if(UNIX AND NOT APPLE)
 else()
   if(APPLE)
     message(STATUS "Avahi disabled on macOS (will use Bonjour instead)")
+  elseif(WIN32)
+    message(STATUS "Avahi disabled on Windows (will use DNS-SD instead)")
   endif()
 endif()
 

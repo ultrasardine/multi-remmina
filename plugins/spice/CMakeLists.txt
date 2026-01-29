@@ -41,6 +41,11 @@ add_library(remmina-plugin-spice MODULE ${REMMINA_PLUGIN_SPICE_SRCS})
 set_target_properties(remmina-plugin-spice PROPERTIES PREFIX "")
 set_target_properties(remmina-plugin-spice PROPERTIES NO_SONAME 1)
 
+# Apply Windows-specific plugin configuration
+if(WIN32)
+  configure_windows_plugin(remmina-plugin-spice)
+endif()
+
 include_directories(${REMMINA_COMMON_INCLUDE_DIRS})
 include_directories(SYSTEM ${SPICE_INCLUDE_DIRS})
 target_link_libraries(remmina-plugin-spice ${REMMINA_COMMON_LIBRARIES} ${SPICE_LIBRARIES})

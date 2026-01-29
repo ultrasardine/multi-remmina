@@ -32,21 +32,31 @@
 # files in the program, then also delete it here.
 
 
-if(NOT APPLE)
+if(NOT APPLE AND NOT WIN32)
     find_suggested_package(Libsecret)
 endif()
 
-if(LIBSECRET_FOUND OR APPLE)
+if(LIBSECRET_FOUND OR APPLE OR WIN32)
     set(REMMINA_PLUGIN_SECRET_SRCS src/glibsecret_plugin.c)
     
     if(APPLE)
         # Add macOS Keychain implementation
         list(APPEND REMMINA_PLUGIN_SECRET_SRCS ${CMAKE_SOURCE_DIR}/src/remmina_keychain_macos.c)
     endif()
+    
+    if(WIN32)
+        # Add Windows Credential Manager implementation
+        list(APPEND REMMINA_PLUGIN_SECRET_SRCS ${CMAKE_SOURCE_DIR}/src/remmina_cred_windows.c)
+    endif()
 
     add_library(remmina-plugin-secret MODULE ${REMMINA_PLUGIN_SECRET_SRCS})
     set_target_properties(remmina-plugin-secret PROPERTIES PREFIX "")
     set_target_properties(remmina-plugin-secret PROPERTIES NO_SONAME 1)
+    
+    # Apply Windows-specific plugin configuration
+    if(WIN32)
+        configure_windows_plugin(remmina-plugin-secret)
+    endif()
 
     include_directories(SYSTEM ${GTK3_INCLUDE_DIRS})
     target_link_libraries(remmina-plugin-secret ${GTK_LIBRARIES})
@@ -55,6 +65,11 @@ if(LIBSECRET_FOUND OR APPLE)
         # Link Security and CoreFoundation frameworks for macOS Keychain support
         target_link_libraries(remmina-plugin-secret "-framework Security" "-framework CoreFoundation" ${GLIB_LIBRARY})
         # Include src directory for remmina_keychain_macos.h
+        target_include_directories(remmina-plugin-secret PRIVATE ${CMAKE_SOURCE_DIR}/src)
+    elseif(WIN32)
+        # Link Advapi32 for Windows Credential Manager APIs (CredWriteW, CredReadW, CredDeleteW)
+        target_link_libraries(remmina-plugin-secret ${GLIB_LIBRARY} advapi32)
+        # Include src directory for remmina_cred_windows.h
         target_include_directories(remmina-plugin-secret PRIVATE ${CMAKE_SOURCE_DIR}/src)
     else()
         include_directories(SYSTEM ${LIBSECRET_INCLUDE_DIRS})

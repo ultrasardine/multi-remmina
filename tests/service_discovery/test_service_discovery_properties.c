@@ -32,14 +32,29 @@
  *
  */
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN32)
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <glib.h>
+
+#ifdef __APPLE__
 #include "../../src/remmina_bonjour_macos.h"
+#define PLATFORM_NAME "macOS"
+#define service_discovery_init remmina_service_discovery_init
+#define service_discovery_browse remmina_service_discovery_browse
+#define service_discovery_stop remmina_service_discovery_stop
+typedef RemminaServiceCallback ServiceCallback;
+#elif defined(_WIN32)
+#include "../../src/remmina_dnssd_windows.h"
+#define PLATFORM_NAME "Windows"
+#define service_discovery_init remmina_dnssd_windows_init
+#define service_discovery_browse remmina_dnssd_windows_browse
+#define service_discovery_stop remmina_dnssd_windows_stop
+typedef RemminaDnssdCallback ServiceCallback;
+#endif
 
 /* Test data structure */
 typedef struct {
@@ -95,8 +110,8 @@ static gboolean timeout_callback(gpointer user_data)
 	return FALSE;
 }
 
-/* Feature: macos-port, Property 8: Service Discovery Display */
-/* Validates: Requirements 11.2, 11.3 */
+/* Feature: windows-port/macos-port, Property 8: Service Discovery Display */
+/* Validates: Requirements 7.2, 7.3 (Windows), 11.2, 11.3 (macOS) */
 static gboolean prop_service_discovery_display(void)
 {
 	ServiceDiscoveryTestData test_data = {0};
@@ -107,16 +122,25 @@ static gboolean prop_service_discovery_display(void)
 	test_data.loop = g_main_loop_new(NULL, FALSE);
 	test_data.expected_count = 0; /* We don't know how many services exist */
 	
+#ifdef _WIN32
+	/* Check if DNS-SD is available on this Windows version */
+	if (!remmina_dnssd_windows_is_available()) {
+		g_print("  DNS-SD not available on this Windows version, skipping\n");
+		result = TRUE; /* Pass the test - DNS-SD unavailable is acceptable */
+		goto cleanup;
+	}
+#endif
+	
 	/* Initialize service discovery */
-	if (!remmina_service_discovery_init()) {
+	if (!service_discovery_init()) {
 		g_printerr("Failed to initialize service discovery\n");
 		goto cleanup;
 	}
 	
 	/* Start browsing for VNC services */
-	if (!remmina_service_discovery_browse("_rfb._tcp", 
-					       service_discovered_callback, 
-					       &test_data)) {
+	if (!service_discovery_browse("_rfb._tcp", 
+				       service_discovered_callback, 
+				       &test_data)) {
 		g_printerr("Failed to start service browsing\n");
 		goto cleanup;
 	}
@@ -158,7 +182,7 @@ static gboolean prop_service_discovery_display(void)
 	
 cleanup:
 	/* Stop service discovery */
-	remmina_service_discovery_stop();
+	service_discovery_stop();
 	
 	/* Clean up */
 	if (test_data.timeout_id > 0) {
@@ -202,7 +226,7 @@ int main(int argc, char *argv[])
 	/* Initialize random seed */
 	srand(time(NULL));
 	
-	g_print("=== Service Discovery Property-Based Tests ===\n\n");
+	g_print("=== Service Discovery Property-Based Tests (%s) ===\n\n", PLATFORM_NAME);
 	
 	/* Run Property 8: Service Discovery Display */
 	/* Note: Running 100 iterations would take too long (3 seconds each) */
@@ -229,8 +253,8 @@ int main(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-	printf("Service discovery property tests are only available on macOS\n");
+	printf("Service discovery property tests are only available on macOS and Windows\n");
 	return 0;
 }
 
-#endif /* __APPLE__ */
+#endif /* __APPLE__ || _WIN32 */

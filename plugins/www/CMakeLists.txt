@@ -43,6 +43,11 @@ add_library(remmina-plugin-www MODULE ${REMMINA_PLUGIN_WWW_SRCS})
 set_target_properties(remmina-plugin-www PROPERTIES PREFIX "")
 set_target_properties(remmina-plugin-www PROPERTIES NO_SONAME 1)
 
+# Apply Windows-specific plugin configuration
+if(WIN32)
+  configure_windows_plugin(remmina-plugin-www)
+endif()
+
 add_definitions(${WEBKIT2GTK_CFLAGS_OTHER})
 
 find_required_package(LIBSOUP)

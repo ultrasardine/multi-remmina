@@ -115,7 +115,7 @@ echo "--------------------------------------------"
 
 # Check secret plugin for platform abstraction
 if [ -f "plugins/secret/src/glibsecret_plugin.c" ]; then
-    if grep -q "#ifdef __APPLE__" plugins/secret/src/glibsecret_plugin.c && \
+    if (grep -q "#ifdef __APPLE__\|#if defined(__APPLE__)\|#if defined(_WIN32)" plugins/secret/src/glibsecret_plugin.c) && \
        grep -q "#else" plugins/secret/src/glibsecret_plugin.c; then
         print_status 0 "Secret plugin has platform abstraction"
     else
@@ -125,11 +125,13 @@ if [ -f "plugins/secret/src/glibsecret_plugin.c" ]; then
 fi
 
 # Check plugin CMakeLists for platform-specific configuration
-if grep -q "if(APPLE)" plugins/secret/CMakeLists.txt; then
-    print_status 0 "Secret plugin CMake has platform detection"
-else
-    print_status 1 "Secret plugin CMake missing platform detection"
-    ERRORS=$((ERRORS + 1))
+if [ -f "plugins/secret/CMakeLists.txt" ]; then
+    if grep -q "if(APPLE)\|if(WIN32)\|IF(APPLE)\|IF(WIN32)" plugins/secret/CMakeLists.txt; then
+        print_status 0 "Secret plugin CMake has platform detection"
+    else
+        print_status 1 "Secret plugin CMake missing platform detection"
+        ERRORS=$((ERRORS + 1))
+    fi
 fi
 
 echo ""

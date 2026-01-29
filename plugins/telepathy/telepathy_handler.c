@@ -34,6 +34,9 @@
  *
  */
 
+/* Telepathy is not supported on Windows - Linux-specific communication framework */
+#ifndef _WIN32
+
 #include "common/remmina_plugin.h"
 #include <gmodule.h>
 #include <telepathy-glib/dbus.h>
@@ -126,3 +129,4 @@ remmina_tp_handler_new(void)
 	return handler;
 }
 
+#endif /* _WIN32 */

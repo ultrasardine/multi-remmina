@@ -34,6 +34,9 @@
  *
  */
 
+/* Telepathy is not supported on Windows - Linux-specific communication framework */
+#ifndef _WIN32
+
 #include "common/remmina_plugin.h"
 #include <telepathy-glib/account.h>
 #include <telepathy-glib/channel.h>
@@ -371,3 +374,4 @@ void remmina_tp_channel_handler_new(const gchar *account_path, const gchar *conn
 	tp_account_prepare_async(account, NULL, remmina_tp_channel_handler_account_ready, chandler);
 }
 
+#endif /* _WIN32 */

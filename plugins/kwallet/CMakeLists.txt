@@ -47,6 +47,11 @@ if(KF5Wallet_FOUND)
     set_target_properties(remmina-plugin-kwallet PROPERTIES PREFIX "")
     set_target_properties(remmina-plugin-kwallet PROPERTIES NO_SONAME 1)
 
+    # Apply Windows-specific plugin configuration
+    if(WIN32)
+      configure_windows_plugin(remmina-plugin-kwallet)
+    endif()
+
     include_directories(${GTK_INCLUDE_DIRS})
     target_link_libraries(remmina-plugin-kwallet KF5::Wallet ${GLib_LIBRARY})
 

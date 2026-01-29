@@ -22,29 +22,45 @@ include(LibFindMacros)
 # Dependencies
 find_package(PkgConfig)
 
+# Add MSYS2 paths for Windows
+if(WIN32)
+  set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/mingw64/lib/pkgconfig:/ucrt64/lib/pkgconfig")
+endif()
+
 # Use pkg-config to get hints about paths
 libfind_pkg_check_modules(PC_LIBSSH libssh>=0.6)
 
 
 set(LIBSSH_DEFINITIONS ${PC_LIBSSH_CFLAGS_OTHER})
 
+# Additional search paths for Windows MSYS2
+set(_LIBSSH_SEARCH_PATHS "")
+if(WIN32)
+  list(APPEND _LIBSSH_SEARCH_PATHS
+    /mingw64/include
+    /ucrt64/include
+    /mingw64/lib
+    /ucrt64/lib
+  )
+endif()
+
 # Include dir
 find_path(LIBSSH_INCLUDE_DIR
 	NAMES libssh/libssh.h
 	#HINTS ${PC_LIBSSH_INCLUDEDIR} ${PC_LIBSSH_INCLUDE_DIRS}
-	PATHS ${PC_LIBSSH_PKGCONF_INCLUDE_DIRS}
+	PATHS ${PC_LIBSSH_PKGCONF_INCLUDE_DIRS} ${_LIBSSH_SEARCH_PATHS}
 )
 
 # The library itself
 find_library(LIBSSH_LIBRARY
 	NAMES ssh
 	#HINTS ${PC_LIBSSH_LIBDIR} ${PC_LIBSSH_LIBRARY_DIRS}
-	PATHS ${PC_LIBSSH_PKGCONF_LIBRARY_DIRS}
+	PATHS ${PC_LIBSSH_PKGCONF_LIBRARY_DIRS} ${_LIBSSH_SEARCH_PATHS}
 )
 
 find_library(LIBSSH_THREADS_LIBRARY
 	NAMES ssh_threads
-	PATHS ${PC_LIBSSH_LIBDIR} ${PC_LIBSSH_LIBRARY_DIRS}
+	PATHS ${PC_LIBSSH_LIBDIR} ${PC_LIBSSH_LIBRARY_DIRS} ${_LIBSSH_SEARCH_PATHS}
 )
 
 include(FindPackageHandleStandardArgs)

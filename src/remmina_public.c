@@ -64,6 +64,9 @@
 #ifdef __APPLE__
 #include "remmina_bundle_macos.h"
 #endif
+#ifdef _WIN32
+#include "remmina_paths_windows.h"
+#endif
 
 GtkWidget*
 remmina_public_create_combo_entry(const gchar *text, const gchar *def, gboolean descending)
@@ -559,7 +562,11 @@ GtkBuilder* remmina_public_gtk_builder_new_from_file(gchar *filename)
 	GError *err = NULL;
 	gchar *ui_path;
 	
-#ifdef __APPLE__
+#ifdef _WIN32
+	gchar *ui_dir = remmina_paths_get_ui_dir();
+	ui_path = g_build_filename(ui_dir, filename, NULL);
+	g_free(ui_dir);
+#elif defined(__APPLE__)
 	gchar *ui_dir = remmina_get_ui_dir();
 	ui_path = g_build_filename(ui_dir, filename, NULL);
 	g_free(ui_dir);

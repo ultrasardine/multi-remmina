@@ -90,7 +90,11 @@ static gboolean test_plugin_missing_dependency(void)
 	g_print("Test: Plugin loading with missing dependency\n");
 	
 	/* Try to load a non-existent plugin file */
+#ifdef _WIN32
+	gchar *fake_plugin = g_build_filename(test_plugin_dir, "nonexistent_plugin.dll", NULL);
+#else
 	gchar *fake_plugin = g_build_filename(test_plugin_dir, "nonexistent_plugin.so", NULL);
+#endif
 	
 	/* This should fail gracefully without crashing */
 	GModule *module = g_module_open(fake_plugin, G_MODULE_BIND_LAZY);
@@ -118,7 +122,11 @@ static gboolean test_plugin_corrupted_file(void)
 	g_print("Test: Plugin loading with corrupted file\n");
 	
 	/* Create a corrupted plugin file (just random data) */
+#ifdef _WIN32
+	gchar *corrupted_plugin = g_build_filename(test_plugin_dir, "corrupted_plugin.dll", NULL);
+#else
 	gchar *corrupted_plugin = g_build_filename(test_plugin_dir, "corrupted_plugin.so", NULL);
+#endif
 	
 	FILE *fp = fopen(corrupted_plugin, "wb");
 	if (fp) {
@@ -162,7 +170,11 @@ static gboolean test_plugin_error_logging(void)
 	/* This test verifies that plugin loading failures are logged */
 	/* Try to load multiple invalid plugins */
 	for (gint i = 0; i < 5; i++) {
+#ifdef _WIN32
+		gchar *fake_plugin = g_strdup_printf("%s/fake_plugin_%d.dll", test_plugin_dir, i);
+#else
 		gchar *fake_plugin = g_strdup_printf("%s/fake_plugin_%d.so", test_plugin_dir, i);
+#endif
 		
 		/* This should fail and log an error */
 		GModule *module = g_module_open(fake_plugin, G_MODULE_BIND_LAZY);
@@ -186,7 +198,29 @@ static gboolean test_plugin_directory_discovery(void)
 	
 	g_print("Test: Plugin directory discovery in bundle\n");
 	
-#ifdef __APPLE__
+#ifdef _WIN32
+	/* On Windows, verify installation plugin directory paths */
+	const gchar *possible_dirs[] = {
+		"plugins",                           /* Relative to executable */
+		"../plugins",                        /* One level up */
+		"C:\\Program Files\\Multi-Remmina\\plugins",  /* Standard installation */
+		"C:\\Program Files (x86)\\Multi-Remmina\\plugins",
+		NULL
+	};
+	
+	gboolean found_dir = FALSE;
+	for (gint i = 0; possible_dirs[i] != NULL; i++) {
+		if (g_file_test(possible_dirs[i], G_FILE_TEST_IS_DIR)) {
+			g_print("  ✓ Plugin directory exists: %s\n", possible_dirs[i]);
+			found_dir = TRUE;
+			break;
+		}
+	}
+	
+	if (!found_dir) {
+		g_print("  ⚠ No plugin directory found (may not be installed)\n");
+	}
+#elif defined(__APPLE__)
 	/* On macOS, verify bundle plugin directory paths */
 	const gchar *possible_dirs[] = {
 		"../Resources/lib/remmina/plugins",  /* Relative to executable in bundle */
@@ -244,9 +278,17 @@ static gboolean test_plugin_file_extensions(void)
 	const gchar *module_suffix = G_MODULE_SUFFIX;
 	g_print("  ✓ Module suffix: %s\n", module_suffix);
 	
+	/* On Windows, plugins are .dll */
 	/* On macOS, plugins can be .so or .dylib */
 	/* On Linux, plugins are .so */
-#ifdef __APPLE__
+#ifdef _WIN32
+	if (g_strcmp0(module_suffix, "dll") == 0) {
+		g_print("  ✓ Module suffix is valid for Windows\n");
+	} else {
+		g_printerr("  ERROR: Unexpected module suffix on Windows: %s\n", module_suffix);
+		result = FALSE;
+	}
+#elif defined(__APPLE__)
 	if (g_strcmp0(module_suffix, "so") == 0 || g_strcmp0(module_suffix, "dylib") == 0) {
 		g_print("  ✓ Module suffix is valid for macOS\n");
 	} else {

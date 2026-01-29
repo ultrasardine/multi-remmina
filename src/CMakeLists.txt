@@ -159,6 +159,19 @@ if(APPLE)
   message(STATUS "Added macOS Keychain, Bonjour, and Bundle support files")
 endif()
 
+# Add Windows-specific source files
+if(WIN32)
+  list(APPEND REMMINA_SRCS
+    "remmina_cred_windows.c"
+    "remmina_cred_windows.h"
+    "remmina_paths_windows.c"
+    "remmina_paths_windows.h"
+    "remmina_dnssd_windows.c"
+    "remmina_dnssd_windows.h"
+  )
+  message(STATUS "Added Windows Credential Manager, Path handling, and DNS-SD support files")
+endif()
+
 compile_gresources(
   RESOURCE_FILE
   XML_OUT
@@ -207,12 +220,14 @@ if(GCRYPT_FOUND)
   target_link_libraries(remmina ${GCRYPT_LIBRARIES})
 endif()
 
-if(AVAHI_FOUND AND NOT APPLE)
+if(AVAHI_FOUND AND NOT APPLE AND NOT WIN32)
   include_directories(SYSTEM ${AVAHI_INCLUDE_DIRS})
   target_link_libraries(remmina ${AVAHI_LIBRARIES})
   message(STATUS "Avahi support enabled (Linux)")
 elseif(APPLE)
   message(STATUS "Avahi support disabled on macOS (using Bonjour instead)")
+elseif(WIN32)
+  message(STATUS "Avahi support disabled on Windows (using DNS-SD instead)")
 endif()
 
 if(OPENSSL_FOUND)
@@ -284,6 +299,12 @@ endif()
 if(APPLE)
   target_link_libraries(remmina "-framework Security" "-framework CoreFoundation")
   message(STATUS "Linked macOS Security and CoreFoundation frameworks")
+endif()
+
+# Link Windows APIs
+if(WIN32)
+  target_link_libraries(remmina advapi32 shell32 ole32 dnsapi ws2_32)
+  message(STATUS "Linked Windows Advapi32, Shell32, Ole32, Dnsapi, Ws2_32 for Credential Manager, Path handling, and DNS-SD support")
 endif()
 
 find_required_package(PCRE2)

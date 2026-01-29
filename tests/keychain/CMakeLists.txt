@@ -1,11 +1,11 @@
-# Keychain property-based tests (macOS only)
+# Keychain property-based tests (macOS) and Credential Manager tests (Windows)
+
+# Find required packages
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GLIB REQUIRED glib-2.0)
+pkg_check_modules(GIO REQUIRED gio-2.0)
 
 if(APPLE)
-	# Find required packages
-	find_package(PkgConfig REQUIRED)
-	pkg_check_modules(GLIB REQUIRED glib-2.0)
-	pkg_check_modules(GIO REQUIRED gio-2.0)
-
 	# Property-based tests
 	add_executable(test_keychain_properties
 		test_keychain_properties.c
@@ -44,7 +44,7 @@ if(APPLE)
 		"-framework CoreFoundation"
 	)
 
-	# Platform abstraction tests
+	# Platform abstraction tests (macOS)
 	add_executable(test_platform_abstraction
 		test_platform_abstraction.c
 		../../src/remmina_keychain_macos.c
@@ -66,5 +66,26 @@ if(APPLE)
 	# Add tests to CTest
 	add_test(NAME KeychainProperties COMMAND test_keychain_properties)
 	add_test(NAME KeychainUnit COMMAND test_keychain_unit)
+	add_test(NAME PlatformAbstraction COMMAND test_platform_abstraction)
+elseif(WIN32)
+	# Platform abstraction tests (Windows)
+	add_executable(test_platform_abstraction
+		test_platform_abstraction.c
+		../../src/remmina_cred_windows.c
+	)
+
+	target_include_directories(test_platform_abstraction PRIVATE
+		${CMAKE_SOURCE_DIR}/src
+		${GLIB_INCLUDE_DIRS}
+		${GIO_INCLUDE_DIRS}
+	)
+
+	target_link_libraries(test_platform_abstraction
+		${GLIB_LIBRARIES}
+		${GIO_LIBRARIES}
+		advapi32
+	)
+
+	# Add tests to CTest
 	add_test(NAME PlatformAbstraction COMMAND test_platform_abstraction)
 endif()

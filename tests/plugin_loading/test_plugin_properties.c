@@ -42,7 +42,7 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
-/* Feature: macos-port, Property 3: Plugin Protocol Registration */
+/* Feature: windows-port, Property 3: Plugin Protocol Registration */
 /* Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.6 */
 /*
  * This is a simplified test that verifies plugin loading works by checking
@@ -55,7 +55,50 @@ static gboolean prop_plugin_protocol_registration(void)
 	
 	g_print("  Checking plugin directory accessibility\n");
 	
-#ifdef __APPLE__
+#ifdef _WIN32
+	/* On Windows, check installation plugin directory */
+	const gchar *possible_dirs[] = {
+		"plugins",                           /* Relative to executable */
+		"../plugins",                        /* One level up */
+		"C:\\Program Files\\Multi-Remmina\\plugins",  /* Standard installation */
+		"C:\\Program Files (x86)\\Multi-Remmina\\plugins",
+		NULL
+	};
+	
+	gboolean found_dir = FALSE;
+	for (gint i = 0; possible_dirs[i] != NULL; i++) {
+		if (g_file_test(possible_dirs[i], G_FILE_TEST_IS_DIR)) {
+			g_print("  ✓ Plugin directory found: %s\n", possible_dirs[i]);
+			found_dir = TRUE;
+			
+			/* List plugins in directory */
+			GDir *dir = g_dir_open(possible_dirs[i], 0, NULL);
+			if (dir) {
+				const gchar *name;
+				gint plugin_count = 0;
+				while ((name = g_dir_read_name(dir)) != NULL) {
+					if (g_str_has_suffix(name, ".dll")) {
+						g_print("    - %s\n", name);
+						plugin_count++;
+					}
+				}
+				g_dir_close(dir);
+				
+				if (plugin_count > 0) {
+					g_print("  ✓ Found %d plugin file(s)\n", plugin_count);
+				} else {
+					g_print("  ⚠ No plugin files found (may need to build plugins first)\n");
+				}
+			}
+			break;
+		}
+	}
+	
+	if (!found_dir) {
+		g_print("  ⚠ No plugin directory found (may need to build/install Multi-Remmina first)\n");
+		g_print("  Note: This is expected if running tests before installation\n");
+	}
+#elif defined(__APPLE__)
 	/* On macOS, check bundle plugin directory */
 	const gchar *possible_dirs[] = {
 		"../Resources/lib/remmina/plugins",  /* Relative to executable in bundle */

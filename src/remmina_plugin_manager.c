@@ -67,6 +67,9 @@
 #ifdef __APPLE__
 #include "remmina_bundle_macos.h"
 #endif
+#ifdef _WIN32
+#include "remmina_paths_windows.h"
+#endif
 
 static GPtrArray* remmina_plugin_table = NULL;
 
@@ -354,7 +357,19 @@ static gint compare_secret_plugin_init_order(gconstpointer a, gconstpointer b)
 static gchar* remmina_plugin_manager_create_alt_plugin_dir(void)
 {
 	gchar *plugin_dir;
+	
+#ifdef _WIN32
+	/* On Windows, use %APPDATA%\multi-remmina\plugins */
+	gchar *config_dir = remmina_paths_get_config_dir();
+	if (config_dir != NULL) {
+		plugin_dir = g_build_filename(config_dir, "plugins", NULL);
+		g_free(config_dir);
+	} else {
+		plugin_dir = g_build_path("/", g_get_user_config_dir(), "multi-remmina", "plugins", NULL);
+	}
+#else
 	plugin_dir = g_build_path("/", g_get_user_config_dir(), "remmina", "plugins", NULL);
+#endif
 
 	if (g_file_test(plugin_dir, G_FILE_TEST_IS_DIR)) {
 		// Do nothing, directory already exists
@@ -518,7 +533,15 @@ void remmina_plugin_manager_init(void)
 		
 	}
 	
-#ifdef __APPLE__
+#ifdef _WIN32
+	/* On Windows, use installation directory plugin path */
+	gchar *windows_plugin_dir = remmina_paths_get_plugin_dir();
+	if (windows_plugin_dir != NULL) {
+		g_ptr_array_add(plugin_dirs, windows_plugin_dir);
+	} else {
+		g_warning("Failed to get Windows plugin directory");
+	}
+#elif defined(__APPLE__)
 	/* On macOS, use bundle plugin directory */
 	gchar *bundle_plugin_dir = remmina_get_plugin_dir();
 	g_ptr_array_add(plugin_dirs, bundle_plugin_dir);

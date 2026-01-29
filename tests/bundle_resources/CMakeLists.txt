@@ -56,3 +56,47 @@ if(APPLE)
 	add_test(NAME IconResourceProperties COMMAND test_icon_properties)
 	add_test(NAME BundleResourceUnit COMMAND test_bundle_unit)
 endif()
+
+if(WIN32)
+	# Property-based tests for Windows self-contained resource resolution
+	add_executable(test_windows_resource_properties
+		test_windows_resource_properties.c
+		${CMAKE_SOURCE_DIR}/src/remmina_paths_windows.c
+	)
+
+	target_include_directories(test_windows_resource_properties PRIVATE
+		${CMAKE_SOURCE_DIR}/src
+		${CMAKE_SOURCE_DIR}/src/include
+	)
+
+	target_link_libraries(test_windows_resource_properties
+		${GLIB_LIBRARIES}
+		${GIO_LIBRARIES}
+		Advapi32
+		Shell32
+		Ole32
+	)
+
+	# Property-based tests for Windows icon resource loading
+	add_executable(test_windows_icon_properties
+		test_windows_icon_properties.c
+		${CMAKE_SOURCE_DIR}/src/remmina_paths_windows.c
+	)
+
+	target_include_directories(test_windows_icon_properties PRIVATE
+		${CMAKE_SOURCE_DIR}/src
+		${CMAKE_SOURCE_DIR}/src/include
+	)
+
+	target_link_libraries(test_windows_icon_properties
+		${GLIB_LIBRARIES}
+		${GIO_LIBRARIES}
+		Advapi32
+		Shell32
+		Ole32
+	)
+
+	# Add tests to CTest
+	add_test(NAME WindowsResourceProperties COMMAND test_windows_resource_properties)
+	add_test(NAME WindowsIconProperties COMMAND test_windows_icon_properties)
+endif()

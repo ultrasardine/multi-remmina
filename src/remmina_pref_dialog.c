@@ -60,6 +60,9 @@
 #ifdef GDK_WINDOWING_WAYLAND
 	#include <gdk/gdkwayland.h>
 #endif
+#ifdef _WIN32
+#include "remmina_paths_windows.h"
+#endif
 
 static RemminaPrefDialog *remmina_pref_dialog;
 
@@ -558,8 +561,15 @@ static void remmina_pref_dialog_init(gboolean load_plugins)
 	gtk_switch_set_active(GTK_SWITCH(remmina_pref_dialog->switch_terminal_bold), remmina_pref.vte_allow_bold_text);
 
 	if (remmina_pref.color_file && remmina_pref.color_file[0] != '\0'){
+#ifdef _WIN32
+		gchar* remmina_dir = remmina_paths_get_config_dir();
+		if (remmina_dir == NULL) {
+			remmina_dir = g_build_path("/", g_get_user_config_dir(), "multi-remmina", NULL);
+		}
+#else
 		gchar* remmina_dir = g_build_path("/", g_get_user_config_dir(), "remmina", NULL);
-		/* /home/foo/.config/remmina */
+#endif
+		/* /home/foo/.config/remmina or %APPDATA%\multi-remmina */
 		gchar* destpath = g_strdup_printf("%s/remmina.colors", remmina_dir);
 		GFile* color_file = g_file_new_for_path(destpath);
 		if (g_file_query_exists(color_file, NULL)){
@@ -727,8 +737,15 @@ void remmina_pref_on_color_scheme_selected(GtkWidget *widget, gpointer user_data
 	sourcepath = gtk_file_chooser_get_filename(remmina_pref_dialog->button_term_cs);
 	source = g_file_new_for_path(sourcepath);
 
+#ifdef _WIN32
+	remmina_dir = remmina_paths_get_config_dir();
+	if (remmina_dir == NULL) {
+		remmina_dir = g_build_path("/", g_get_user_config_dir(), "multi-remmina", NULL);
+	}
+#else
 	remmina_dir = g_build_path("/", g_get_user_config_dir(), "remmina", NULL);
-	/* /home/foo/.config/remmina */
+#endif
+	/* /home/foo/.config/remmina or %APPDATA%\multi-remmina */
 	destpath = g_strdup_printf("%s/remmina.colors", remmina_dir);
 	destination = g_file_new_for_path(destpath);
 
@@ -758,8 +775,15 @@ void remmina_pref_on_color_scheme_removed(GtkWidget *widget, gpointer user_data)
 	gchar *destpath;
 	GFile *destination;
 
+#ifdef _WIN32
+	remmina_dir = remmina_paths_get_config_dir();
+	if (remmina_dir == NULL) {
+		remmina_dir = g_build_path("/", g_get_user_config_dir(), "multi-remmina", NULL);
+	}
+#else
 	remmina_dir = g_build_path("/", g_get_user_config_dir(), "remmina", NULL);
-	/* /home/foo/.config/remmina */
+#endif
+	/* /home/foo/.config/remmina or %APPDATA%\multi-remmina */
 	destpath = g_strdup_printf("%s/remmina.colors", remmina_dir);
 	destination = g_file_new_for_path(destpath);
 	if (g_file_test(destpath, G_FILE_TEST_IS_REGULAR)) {
@@ -910,7 +934,14 @@ GtkWidget *remmina_pref_dialog_new(gint default_tab, GtkWindow *parent)
 #if VTE_CHECK_VERSION(0, 38, 0)
 	const gchar *remmina_dir;
 	gchar *destpath;
+#ifdef _WIN32
+	remmina_dir = remmina_paths_get_config_dir();
+	if (remmina_dir == NULL) {
+		remmina_dir = g_build_path("/", g_get_user_config_dir(), "multi-remmina", NULL);
+	}
+#else
 	remmina_dir = g_build_path("/", g_get_user_config_dir(), "remmina", NULL);
+#endif
 	destpath = g_strdup_printf("%s/remmina.colors", remmina_dir);
 	remmina_pref_dialog->button_term_cs = GTK_FILE_CHOOSER(GET_OBJECT("button_term_cs"));
 	const gchar *fc_tooltip_text = g_strconcat(_("Picking a terminal colouring file replaces the file: "),
@@ -920,7 +951,18 @@ GtkWidget *remmina_pref_dialog_new(gint default_tab, GtkWindow *parent)
 						   _("This file contains the “Custom” terminal colour scheme selectable from the “Advanced” tab of terminal connections and editable in the “Terminal” tab in the settings."),
 						   NULL);
 	gtk_widget_set_tooltip_text(GTK_WIDGET(remmina_pref_dialog->button_term_cs), fc_tooltip_text);
+#ifdef _WIN32
+	gchar *theme_dir = remmina_paths_get_theme_dir();
+	if (theme_dir != NULL) {
+		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(remmina_pref_dialog->button_term_cs), theme_dir);
+		g_free(theme_dir);
+	} else {
+		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(remmina_pref_dialog->button_term_cs), REMMINA_RUNTIME_TERM_CS_DIR);
+	}
+#else
 	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(remmina_pref_dialog->button_term_cs), REMMINA_RUNTIME_TERM_CS_DIR);
+#endif
+	g_free((gchar*)remmina_dir);
 	g_free(destpath);
 #endif
 #endif

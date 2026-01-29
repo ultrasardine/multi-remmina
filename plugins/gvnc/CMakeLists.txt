@@ -40,6 +40,11 @@ add_library(remmina-plugin-gvnc MODULE ${REMMINA_PLUGIN_GVNC_SRCS})
 set_target_properties(remmina-plugin-gvnc PROPERTIES PREFIX "")
 set_target_properties(remmina-plugin-gvnc PROPERTIES NO_SONAME 1)
 
+# Apply Windows-specific plugin configuration
+if(WIN32)
+  configure_windows_plugin(remmina-plugin-gvnc)
+endif()
+
 include_directories(${REMMINA_COMMON_INCLUDE_DIRS} ${GTK-VNC_INCLUDE_DIRS})
 target_link_libraries(remmina-plugin-gvnc ${REMMINA_COMMON_LIBRARIES} ${GTK-VNC_LIBRARIES})
 

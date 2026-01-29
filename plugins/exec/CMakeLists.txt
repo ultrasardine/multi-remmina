@@ -41,6 +41,11 @@ add_library(remmina-plugin-exec MODULE ${REMMINA_PLUGIN_EXEC_SRCS})
 set_target_properties(remmina-plugin-exec PROPERTIES PREFIX "")
 set_target_properties(remmina-plugin-exec PROPERTIES NO_SONAME 1)
 
+# Apply Windows-specific plugin configuration
+if(WIN32)
+  configure_windows_plugin(remmina-plugin-exec)
+endif()
+
 include_directories(${REMMINA_COMMON_INCLUDE_DIRS})
 include_directories(SYSTEM ${GTK_INCLUDE_DIRS})
 target_link_libraries(remmina-plugin-exec ${REMMINA_COMMON_LIBRARIES})

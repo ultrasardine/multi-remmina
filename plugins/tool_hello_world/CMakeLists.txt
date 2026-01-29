@@ -41,6 +41,11 @@ add_library(remmina-plugin-tool_hello_world MODULE ${REMMINA_PLUGIN_SRCS})
 set_target_properties(remmina-plugin-tool_hello_world PROPERTIES PREFIX "")
 set_target_properties(remmina-plugin-tool_hello_world PROPERTIES NO_SONAME 1)
 
+# Apply Windows-specific plugin configuration
+if(WIN32)
+  configure_windows_plugin(remmina-plugin-tool_hello_world)
+endif()
+
 include_directories(${REMMINA_COMMON_INCLUDE_DIRS})
 target_link_libraries(remmina-plugin-tool_hello_world ${REMMINA_COMMON_LIBRARIES})
 

@@ -40,7 +40,8 @@
 
 #include "remmina_icon.h"
 
-#ifdef HAVE_LIBAPPINDICATOR
+/* Windows always uses StatusIcon, never AppIndicator */
+#if defined(HAVE_LIBAPPINDICATOR) && !defined(_WIN32)
 #  ifdef HAVE_AYATANA_LIBAPPINDICATOR
 #    include <libayatana-appindicator/app-indicator.h>
 #  else
@@ -61,7 +62,8 @@
 #include "remmina_sysinfo.h"
 
 typedef struct _RemminaIcon {
-#ifdef HAVE_LIBAPPINDICATOR
+/* Windows always uses StatusIcon, never AppIndicator */
+#if defined(HAVE_LIBAPPINDICATOR) && !defined(_WIN32)
 	AppIndicator *	icon;
 	gboolean	indicator_connected;
 #else
@@ -81,7 +83,8 @@ static RemminaIcon remmina_icon =
 void remmina_icon_destroy(void)
 {
 	TRACE_CALL(__func__);
-#ifdef HAVE_LIBAPPINDICATOR
+/* Windows always uses StatusIcon, never AppIndicator */
+#if defined(HAVE_LIBAPPINDICATOR) && !defined(_WIN32)
 	if (remmina_icon.icon) {
 		app_indicator_set_status(remmina_icon.icon, APP_INDICATOR_STATUS_PASSIVE);
 		remmina_icon.icon = NULL;
@@ -270,8 +273,8 @@ static void remmina_icon_populate_extra_menu_item(GtkWidget *menu)
 	g_signal_connect(G_OBJECT(menu), "edit-item", G_CALLBACK(remmina_icon_on_edit_item), NULL);
 }
 
-#ifndef HAVE_LIBAPPINDICATOR
-/* StatusIcon callbacks for macOS and systems without AppIndicator */
+#if !defined(HAVE_LIBAPPINDICATOR) || defined(_WIN32)
+/* StatusIcon callbacks for Windows, macOS and systems without AppIndicator */
 static void remmina_icon_on_status_icon_popup_menu(GtkStatusIcon *status_icon, guint button, guint activate_time, gpointer user_data)
 {
 	TRACE_CALL(__func__);
@@ -295,7 +298,8 @@ remmina_icon_populate_menu(void)
 	GtkWidget *menu;
 	GtkWidget *menuitem;
 
-#ifdef HAVE_LIBAPPINDICATOR
+/* Windows always uses StatusIcon, never AppIndicator */
+#if defined(HAVE_LIBAPPINDICATOR) && !defined(_WIN32)
 	if (remmina_icon.icon && !remmina_pref.disable_tray_icon) {
 		menu = remmina_applet_menu_new();
 		app_indicator_set_menu(remmina_icon.icon, GTK_MENU(menu));
@@ -312,7 +316,7 @@ remmina_icon_populate_menu(void)
 		remmina_icon_populate_extra_menu_item(menu);
 	}
 #else
-	/* StatusIcon implementation for macOS and systems without AppIndicator */
+	/* StatusIcon implementation for Windows, macOS and systems without AppIndicator */
 	if (remmina_icon.status_icon && !remmina_pref.disable_tray_icon) {
 		/* Destroy old menu if it exists */
 		if (remmina_icon.menu) {
@@ -408,7 +412,8 @@ gboolean remmina_icon_is_available(void)
 {
 	TRACE_CALL(__func__);
 
-#ifdef HAVE_LIBAPPINDICATOR
+/* Windows always uses StatusIcon, never AppIndicator */
+#if defined(HAVE_LIBAPPINDICATOR) && !defined(_WIN32)
 	if (!remmina_icon.icon)
 		return FALSE;
 	if (remmina_pref.disable_tray_icon)
@@ -428,7 +433,7 @@ gboolean remmina_icon_is_available(void)
 	 */
 	return TRUE;
 #else
-	/* StatusIcon implementation for macOS and systems without AppIndicator */
+	/* StatusIcon implementation for Windows, macOS and systems without AppIndicator */
 	if (!remmina_icon.status_icon)
 		return FALSE;
 	if (remmina_pref.disable_tray_icon)
@@ -445,7 +450,8 @@ gboolean remmina_icon_is_available(void)
 #endif
 }
 
-#ifdef HAVE_LIBAPPINDICATOR
+/* Windows always uses StatusIcon, never AppIndicator */
+#if defined(HAVE_LIBAPPINDICATOR) && !defined(_WIN32)
 static void
 remmina_icon_connection_changed_cb(AppIndicator *indicator, gboolean connected, gpointer data)
 {
@@ -476,6 +482,10 @@ void remmina_icon_init(void)
 		"”:",
 		NULL);
 
+#ifdef _WIN32
+	/* Windows always uses StatusIcon */
+	REMMINA_INFO("Windows: Using GtkStatusIcon for system tray integration");
+#else
 	if (sni_supported) {
 		//TRANSLATORS: %s is a placeholder for "StatusNotifier/Appindicator suppor in “DESKTOP NAME”: "
 		REMMINA_INFO(_("%s your desktop does support it"), msg);
@@ -497,8 +507,9 @@ void remmina_icon_init(void)
 	if (g_strrstr(wmname, "gnome") != NULL)
 		//TRANSLATORS: %s is a placeholder for "StatusNotifier/Appindicator suppor in “DESKTOP NAME”: "
 		REMMINA_INFO(_("%s You may need to install, and use Gnome Shell Extension Appindicator"), msg);
+#endif
 
-#ifdef HAVE_LIBAPPINDICATOR
+#if defined(HAVE_LIBAPPINDICATOR) && !defined(_WIN32)
 	if (!remmina_icon.icon && !remmina_pref.disable_tray_icon) {
 		remmina_icon.icon = app_indicator_new("remmina-icon", remmina_panel, APP_INDICATOR_CATEGORY_APPLICATION_STATUS);
 		app_indicator_set_status(remmina_icon.icon, APP_INDICATOR_STATUS_ACTIVE);
@@ -541,11 +552,14 @@ void remmina_icon_init(void)
 		}
 	}
 #endif
+#ifndef _WIN32
+	/* Autostart file is not used on Windows */
 	if (!remmina_icon.autostart_file && !remmina_pref.disable_tray_icon) {
 		remmina_icon.autostart_file = g_strdup_printf("%s/.config/autostart/remmina-applet.desktop", g_get_home_dir());
 		remmina_icon_create_autostart_file();
 	}
-#ifdef HAVE_LIBAPPINDICATOR
+#endif
+#if defined(HAVE_LIBAPPINDICATOR) && !defined(_WIN32)
 	// "connected" property means a visible indicator, otherwise could be hidden. or fall back to GtkStatusIcon
 	if (remmina_icon.icon)
 		g_signal_connect(G_OBJECT(remmina_icon.icon), "connection-changed", G_CALLBACK(remmina_icon_connection_changed_cb), NULL);

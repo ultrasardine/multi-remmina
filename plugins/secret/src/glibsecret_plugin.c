@@ -39,7 +39,9 @@
 #include <glib.h>
 #include <glib/gi18n-lib.h>
 #include <glib/gstdio.h>
-#ifdef __APPLE__
+#if defined(_WIN32)
+#include "remmina_cred_windows.h"
+#elif defined(__APPLE__)
 #include "remmina_keychain_macos.h"
 #else
 #include <libsecret/secret.h>
@@ -49,7 +51,8 @@
 static RemminaPluginService *remmina_plugin_service = NULL;
 #define REMMINA_PLUGIN_DEBUG(fmt, ...) remmina_plugin_service->_remmina_debug(__func__, fmt, ##__VA_ARGS__)
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(_WIN32)
+/* Linux-specific libsecret schema and service */
 static SecretSchema remmina_file_secret_schema =
 { "org.remmina.Password", SECRET_SCHEMA_NONE,
   {
@@ -63,12 +66,15 @@ static SecretSchema remmina_file_secret_schema =
 static SecretService* secretservice;
 static SecretCollection* defaultcollection;
 #endif
-#endif /* __APPLE__ */
+#endif /* !__APPLE__ && !_WIN32 */
 
 
 static gboolean remmina_plugin_glibsecret_is_service_available(RemminaSecretPlugin* plugin)
 {
-#ifdef __APPLE__
+#if defined(_WIN32)
+	/* Windows Credential Manager is always available */
+	return TRUE;
+#elif defined(__APPLE__)
 	return TRUE;
 #else
 #ifdef LIBSECRET_VERSION_0_18
@@ -79,14 +85,17 @@ static gboolean remmina_plugin_glibsecret_is_service_available(RemminaSecretPlug
 #else
 	return FALSE;
 #endif
-#endif /* __APPLE__ */
+#endif /* _WIN32 / __APPLE__ */
 }
 
 static void remmina_plugin_glibsecret_unlock_secret_service(RemminaSecretPlugin* plugin)
 {
 	TRACE_CALL(__func__);
 
-#ifdef __APPLE__
+#if defined(_WIN32)
+	/* No unlock needed for Windows Credential Manager */
+	return;
+#elif defined(__APPLE__)
 	/* No unlock needed for macOS Keychain */
 	return;
 #else
@@ -107,7 +116,7 @@ static void remmina_plugin_glibsecret_unlock_secret_service(RemminaSecretPlugin*
 		}
 	}
 #endif
-#endif /* __APPLE__ */
+#endif /* _WIN32 / __APPLE__ */
 	return;
 }
 
@@ -120,7 +129,18 @@ static void remmina_plugin_glibsecret_store_password(RemminaSecretPlugin* plugin
 
 	path = remmina_plugin_service->file_get_path(remminafile);
 	
-#ifdef __APPLE__
+#if defined(_WIN32)
+	/* Use Windows Credential Manager */
+	s = g_strdup_printf("MultiRemmina:%s-%s", path, key);
+	if (remmina_cred_windows_store_password(s, "MultiRemmina", password, &r)) {
+		REMMINA_PLUGIN_DEBUG("Password \"%s\" saved for file %s\n", key, path);
+	} else {
+		REMMINA_PLUGIN_DEBUG("Password \"%s\" cannot be saved for file %s: %s\n", key, path, r ? r->message : "Unknown error");
+		if (r)
+			g_error_free(r);
+	}
+	g_free(s);
+#elif defined(__APPLE__)
 	/* Use macOS Keychain */
 	s = g_strdup_printf("%s-%s", path, key);
 	if (remmina_keychain_macos_store_password("Remmina", s, password, &r)) {
@@ -143,7 +163,7 @@ static void remmina_plugin_glibsecret_store_password(RemminaSecretPlugin* plugin
 		REMMINA_PLUGIN_DEBUG("Password \"%s\" cannot be saved for file %s\n", key, path);
 		g_error_free(r);
 	}
-#endif /* __APPLE__ */
+#endif /* _WIN32 / __APPLE__ */
 }
 
 static gchar*
@@ -158,7 +178,20 @@ remmina_plugin_glibsecret_get_password(RemminaSecretPlugin* plugin, RemminaFile 
 
 	path = remmina_plugin_service->file_get_path(remminafile);
 	
-#ifdef __APPLE__
+#if defined(_WIN32)
+	/* Use Windows Credential Manager */
+	s = g_strdup_printf("MultiRemmina:%s-%s", path, key);
+	password = remmina_cred_windows_get_password(s, &r);
+	g_free(s);
+	if (password) {
+		return password;
+	} else {
+		REMMINA_PLUGIN_DEBUG("Password cannot be found for file %s\n", path);
+		if (r)
+			g_error_free(r);
+		return NULL;
+	}
+#elif defined(__APPLE__)
 	/* Use macOS Keychain */
 	s = g_strdup_printf("%s-%s", path, key);
 	password = remmina_keychain_macos_get_password("Remmina", s, &r);
@@ -182,7 +215,7 @@ remmina_plugin_glibsecret_get_password(RemminaSecretPlugin* plugin, RemminaFile 
 		REMMINA_PLUGIN_DEBUG("Password cannot be found for file %s\n", path);
 		return NULL;
 	}
-#endif /* __APPLE__ */
+#endif /* _WIN32 / __APPLE__ */
 }
 
 static void remmina_plugin_glibsecret_delete_password(RemminaSecretPlugin* plugin, RemminaFile *remminafile, const gchar *key)
@@ -194,7 +227,18 @@ static void remmina_plugin_glibsecret_delete_password(RemminaSecretPlugin* plugi
 
 	path = remmina_plugin_service->file_get_path(remminafile);
 	
-#ifdef __APPLE__
+#if defined(_WIN32)
+	/* Use Windows Credential Manager */
+	s = g_strdup_printf("MultiRemmina:%s-%s", path, key);
+	if (remmina_cred_windows_delete_password(s, &r)) {
+		REMMINA_PLUGIN_DEBUG("password \"%s\" deleted for file %s", key, path);
+	} else {
+		REMMINA_PLUGIN_DEBUG("password \"%s\" cannot be deleted for file %s", key, path);
+		if (r)
+			g_error_free(r);
+	}
+	g_free(s);
+#elif defined(__APPLE__)
 	/* Use macOS Keychain */
 	s = g_strdup_printf("%s-%s", path, key);
 	if (remmina_keychain_macos_delete_password("Remmina", s, &r)) {
@@ -212,12 +256,15 @@ static void remmina_plugin_glibsecret_delete_password(RemminaSecretPlugin* plugi
 		REMMINA_PLUGIN_DEBUG("password \"%s\" deleted for file %s", key, path);
 	else
 		REMMINA_PLUGIN_DEBUG("password \"%s\" cannot be deleted for file %s", key, path);
-#endif /* __APPLE__ */
+#endif /* _WIN32 / __APPLE__ */
 }
 
 static gboolean remmina_plugin_glibsecret_init(RemminaSecretPlugin* plugin)
 {
-#ifdef __APPLE__
+#if defined(_WIN32)
+	/* Use Windows Credential Manager */
+	return remmina_cred_windows_init();
+#elif defined(__APPLE__)
 	/* Use macOS Keychain */
 	return remmina_keychain_macos_init();
 #else
@@ -247,7 +294,7 @@ static gboolean remmina_plugin_glibsecret_init(RemminaSecretPlugin* plugin)
 	g_print("Libsecret was too old during compilation, disabling secret service.\n");
 	return FALSE;
 #endif
-#endif /* __APPLE__ */
+#endif /* _WIN32 / __APPLE__ */
 }
 
 static RemminaSecretPlugin remmina_plugin_glibsecret =

@@ -65,6 +65,11 @@ add_library(remmina-plugin-rdp MODULE ${REMMINA_PLUGIN_RDP_SRCS})
 set_target_properties(remmina-plugin-rdp PROPERTIES PREFIX "")
 set_target_properties(remmina-plugin-rdp PROPERTIES NO_SONAME 1)
 
+# Apply Windows-specific plugin configuration
+if(WIN32)
+  configure_windows_plugin(remmina-plugin-rdp)
+endif()
+
 include_directories(${REMMINA_COMMON_INCLUDE_DIRS} ${FreeRDP-Client_INCLUDE_DIR} ${FreeRDP_INCLUDE_DIR} ${WinPR_INCLUDE_DIR})
 target_link_libraries(remmina-plugin-rdp
     ${REMMINA_COMMON_LIBRARIES} freerdp-client)

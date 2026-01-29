@@ -103,3 +103,138 @@ if(APPLE)
 endif()
 
 add_test(NAME ProfileProperties COMMAND test_profile_properties)
+
+# Windows-specific tests
+if(WIN32)
+	# Windows profile creation test
+	add_executable(test_windows_profile_creation
+		test_windows_profile_creation.c
+		${CMAKE_SOURCE_DIR}/src/remmina_file.c
+		${CMAKE_SOURCE_DIR}/src/remmina_file_manager.c
+		${CMAKE_SOURCE_DIR}/src/remmina_crypt.c
+		${CMAKE_SOURCE_DIR}/src/remmina_sodium.c
+		${CMAKE_SOURCE_DIR}/src/remmina_log.c
+		${CMAKE_SOURCE_DIR}/src/remmina_pref.c
+		${CMAKE_SOURCE_DIR}/src/remmina_utils.c
+		${CMAKE_SOURCE_DIR}/src/remmina_string_array.c
+		${CMAKE_SOURCE_DIR}/src/remmina_masterthread_exec.c
+		${CMAKE_SOURCE_DIR}/src/remmina_paths_windows.c
+		${CMAKE_SOURCE_DIR}/src/remmina_cred_windows.c
+	)
+	
+	target_include_directories(test_windows_profile_creation PRIVATE
+		${CMAKE_SOURCE_DIR}/src
+		${CMAKE_SOURCE_DIR}/src/include
+		${CMAKE_BINARY_DIR}
+		${CMAKE_BINARY_DIR}/generated
+		${GLIB_INCLUDE_DIRS}
+		${GIO_INCLUDE_DIRS}
+		${GTK3_INCLUDE_DIRS}
+		${JSONGLIB_INCLUDE_DIRS}
+	)
+	
+	target_link_libraries(test_windows_profile_creation
+		${GLIB_LIBRARIES}
+		${GIO_LIBRARIES}
+		${GTK3_LIBRARIES}
+		${JSONGLIB_LIBRARIES}
+		${sodium_LIBRARY_RELEASE}
+		Advapi32
+		Shell32
+		Ole32
+	)
+	
+	if(GCRYPT_FOUND)
+		target_link_libraries(test_windows_profile_creation ${GCRYPT_LIBRARIES})
+	endif()
+	
+	add_test(NAME WindowsProfileCreation COMMAND test_windows_profile_creation)
+	
+	# Windows profile persistence test
+	add_executable(test_windows_profile_persistence
+		test_windows_profile_persistence.c
+		${CMAKE_SOURCE_DIR}/src/remmina_file.c
+		${CMAKE_SOURCE_DIR}/src/remmina_file_manager.c
+		${CMAKE_SOURCE_DIR}/src/remmina_crypt.c
+		${CMAKE_SOURCE_DIR}/src/remmina_sodium.c
+		${CMAKE_SOURCE_DIR}/src/remmina_log.c
+		${CMAKE_SOURCE_DIR}/src/remmina_pref.c
+		${CMAKE_SOURCE_DIR}/src/remmina_utils.c
+		${CMAKE_SOURCE_DIR}/src/remmina_string_array.c
+		${CMAKE_SOURCE_DIR}/src/remmina_masterthread_exec.c
+		${CMAKE_SOURCE_DIR}/src/remmina_paths_windows.c
+		${CMAKE_SOURCE_DIR}/src/remmina_cred_windows.c
+	)
+	
+	target_include_directories(test_windows_profile_persistence PRIVATE
+		${CMAKE_SOURCE_DIR}/src
+		${CMAKE_SOURCE_DIR}/src/include
+		${CMAKE_BINARY_DIR}
+		${CMAKE_BINARY_DIR}/generated
+		${GLIB_INCLUDE_DIRS}
+		${GIO_INCLUDE_DIRS}
+		${GTK3_INCLUDE_DIRS}
+		${JSONGLIB_INCLUDE_DIRS}
+	)
+	
+	target_link_libraries(test_windows_profile_persistence
+		${GLIB_LIBRARIES}
+		${GIO_LIBRARIES}
+		${GTK3_LIBRARIES}
+		${JSONGLIB_LIBRARIES}
+		${sodium_LIBRARY_RELEASE}
+		Advapi32
+		Shell32
+		Ole32
+	)
+	
+	if(GCRYPT_FOUND)
+		target_link_libraries(test_windows_profile_persistence ${GCRYPT_LIBRARIES})
+	endif()
+	
+	add_test(NAME WindowsProfilePersistence COMMAND test_windows_profile_persistence)
+	
+	# Windows profile property-based tests
+	add_executable(test_windows_profile_properties
+		test_windows_profile_properties.c
+		${CMAKE_SOURCE_DIR}/src/remmina_file.c
+		${CMAKE_SOURCE_DIR}/src/remmina_file_manager.c
+		${CMAKE_SOURCE_DIR}/src/remmina_crypt.c
+		${CMAKE_SOURCE_DIR}/src/remmina_sodium.c
+		${CMAKE_SOURCE_DIR}/src/remmina_log.c
+		${CMAKE_SOURCE_DIR}/src/remmina_pref.c
+		${CMAKE_SOURCE_DIR}/src/remmina_utils.c
+		${CMAKE_SOURCE_DIR}/src/remmina_string_array.c
+		${CMAKE_SOURCE_DIR}/src/remmina_masterthread_exec.c
+		${CMAKE_SOURCE_DIR}/src/remmina_paths_windows.c
+		${CMAKE_SOURCE_DIR}/src/remmina_cred_windows.c
+	)
+	
+	target_include_directories(test_windows_profile_properties PRIVATE
+		${CMAKE_SOURCE_DIR}/src
+		${CMAKE_SOURCE_DIR}/src/include
+		${CMAKE_BINARY_DIR}
+		${CMAKE_BINARY_DIR}/generated
+		${GLIB_INCLUDE_DIRS}
+		${GIO_INCLUDE_DIRS}
+		${GTK3_INCLUDE_DIRS}
+		${JSONGLIB_INCLUDE_DIRS}
+	)
+	
+	target_link_libraries(test_windows_profile_properties
+		${GLIB_LIBRARIES}
+		${GIO_LIBRARIES}
+		${GTK3_LIBRARIES}
+		${JSONGLIB_LIBRARIES}
+		${sodium_LIBRARY_RELEASE}
+		Advapi32
+		Shell32
+		Ole32
+	)
+	
+	if(GCRYPT_FOUND)
+		target_link_libraries(test_windows_profile_properties ${GCRYPT_LIBRARIES})
+	endif()
+	
+	add_test(NAME WindowsProfileProperties COMMAND test_windows_profile_properties)
+endif()

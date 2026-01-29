@@ -85,6 +85,108 @@ if(APPLE)
   message(STATUS "  - Homebrew paths added for FreeRDP, libvncserver, libssh")
 endif()
 
+# Windows-specific plugin configuration (MSYS2/MinGW)
+if(WIN32)
+  message(STATUS "Configuring plugins for Windows")
+  
+  # Add MSYS2/MinGW search paths for plugin dependencies
+  # Support both mingw64 and ucrt64 environments
+  list(APPEND CMAKE_PREFIX_PATH
+    /mingw64
+    /ucrt64
+    /mingw64/lib/cmake
+    /ucrt64/lib/cmake
+    # FreeRDP CMake config paths
+    /mingw64/lib/cmake/FreeRDP2
+    /ucrt64/lib/cmake/FreeRDP2
+    /mingw64/lib/cmake/FreeRDP3
+    /ucrt64/lib/cmake/FreeRDP3
+    /mingw64/lib/cmake/FreeRDP-Client2
+    /ucrt64/lib/cmake/FreeRDP-Client2
+    /mingw64/lib/cmake/FreeRDP-Client3
+    /ucrt64/lib/cmake/FreeRDP-Client3
+    # WinPR CMake config paths
+    /mingw64/lib/cmake/WinPR2
+    /ucrt64/lib/cmake/WinPR2
+    /mingw64/lib/cmake/WinPR3
+    /ucrt64/lib/cmake/WinPR3
+    # libssh CMake config paths
+    /mingw64/lib/cmake/libssh
+    /ucrt64/lib/cmake/libssh
+  )
+  
+  # Add MSYS2 include paths for plugin dependencies
+  include_directories(SYSTEM
+    /mingw64/include
+    /ucrt64/include
+    # FreeRDP include paths
+    /mingw64/include/freerdp2
+    /ucrt64/include/freerdp2
+    /mingw64/include/freerdp3
+    /ucrt64/include/freerdp3
+    # WinPR include paths
+    /mingw64/include/winpr2
+    /ucrt64/include/winpr2
+    /mingw64/include/winpr3
+    /ucrt64/include/winpr3
+    # libvncserver include paths
+    /mingw64/include/rfb
+    /ucrt64/include/rfb
+    # libssh include paths
+    /mingw64/include/libssh
+    /ucrt64/include/libssh
+  )
+  
+  # Add MSYS2 library paths for plugin dependencies
+  link_directories(
+    /mingw64/lib
+    /ucrt64/lib
+    /mingw64/bin
+    /ucrt64/bin
+  )
+  
+  # Set PKG_CONFIG_PATH for MSYS2 packages
+  set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/mingw64/lib/pkgconfig:/ucrt64/lib/pkgconfig")
+  
+  # Windows DLL naming convention
+  # Plugins will be built as .dll files instead of .so
+  set(CMAKE_SHARED_LIBRARY_SUFFIX ".dll")
+  set(CMAKE_SHARED_MODULE_SUFFIX ".dll")
+  
+  # Windows plugins don't use RPATH - DLLs are found in executable directory
+  set(CMAKE_SKIP_RPATH TRUE)
+  
+  # Export all symbols for Windows DLLs (needed for plugin loading)
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+  
+  # Define a helper function to configure Windows plugin targets
+  # This ensures consistent DLL output configuration across all plugins
+  function(configure_windows_plugin TARGET_NAME)
+    if(WIN32)
+      # Set output name without lib prefix (Windows convention)
+      set_target_properties(${TARGET_NAME} PROPERTIES PREFIX "")
+      # Ensure .dll suffix
+      set_target_properties(${TARGET_NAME} PROPERTIES SUFFIX ".dll")
+      # No SONAME on Windows
+      set_target_properties(${TARGET_NAME} PROPERTIES NO_SONAME 1)
+      # Export all symbols
+      set_target_properties(${TARGET_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+      # Set runtime output directory to match install location
+      set_target_properties(${TARGET_NAME} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins"
+      )
+    endif()
+  endfunction()
+  
+  message(STATUS "Windows plugin configuration complete:")
+  message(STATUS "  - MSYS2 paths: /mingw64, /ucrt64")
+  message(STATUS "  - Plugin extension: .dll")
+  message(STATUS "  - FreeRDP paths configured")
+  message(STATUS "  - libvncserver paths configured")
+  message(STATUS "  - libssh paths configured")
+endif()
+
 include_directories(${CMAKE_SOURCE_DIR}/plugins)
 
 set(APPICONSCALE_EMBLEMS_DIR "${REMMINA_DATADIR}/icons/hicolor/scalable/emblems")

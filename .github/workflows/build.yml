@@ -542,6 +542,170 @@ jobs:
           Multi-Remmina*.dmg
         retention-days: 30
 
+  # Windows build job
+  build-windows:
+    name: Build on Windows
+    runs-on: windows-latest
+    
+    defaults:
+      run:
+        shell: msys2 {0}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        update: true
+        install: >-
+          mingw-w64-ucrt-x86_64-toolchain
+          mingw-w64-ucrt-x86_64-cmake
+          mingw-w64-ucrt-x86_64-ninja
+          mingw-w64-ucrt-x86_64-gtk3
+          mingw-w64-ucrt-x86_64-glib2
+          mingw-w64-ucrt-x86_64-libsodium
+          mingw-w64-ucrt-x86_64-openssl
+          mingw-w64-ucrt-x86_64-libssh
+          mingw-w64-ucrt-x86_64-libvncserver
+          mingw-w64-ucrt-x86_64-json-glib
+          mingw-w64-ucrt-x86_64-curl
+          mingw-w64-ucrt-x86_64-freerdp
+          mingw-w64-ucrt-x86_64-gettext
+          mingw-w64-ucrt-x86_64-pcre2
+          pkg-config
+          make
+    
+    - name: Configure CMake
+      run: |
+        cmake -B build -G "MSYS Makefiles" \
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+          -DCMAKE_INSTALL_PREFIX=/ucrt64 \
+          -DWITH_AVAHI=OFF \
+          -DWITH_APPINDICATOR=OFF \
+          -DWITH_TELEPATHY=OFF \
+          -DWITH_VTE=OFF \
+          -DWITH_LIBSECRET=OFF \
+          -DWITH_WINDOWS_CREDENTIAL_MANAGER=ON \
+          -DWITH_FREERDP=ON \
+          -DWITH_NEWS=OFF \
+          -DWITH_STATS=OFF \
+          -DWITH_TESTS=ON
+    
+    - name: Build
+      run: cmake --build build --config ${{env.BUILD_TYPE}} -j$(nproc)
+    
+    - name: Generate version
+      id: version
+      run: |
+        BRANCH="${{ github.ref_name }}"
+        
+        if [ "$BRANCH" = "dev" ]; then
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          BUILD_NUMBER=${{ github.run_number }}
+          VERSION="${YEAR}-${MONTH}-${BUILD_NUMBER}-dev"
+        else
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          LATEST_TAG=$(git tag -l "v${YEAR}.${MONTH}.*" | sort -V | tail -1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            PATCH=0
+          else
+            PATCH=$(echo $LATEST_TAG | sed "s/v${YEAR}\.${MONTH}\.//" | sed 's/-.*//')
+            PATCH=$((PATCH + 1))
+          fi
+          
+          VERSION="${YEAR}.${MONTH}.${PATCH}"
+        fi
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Generated version: $VERSION"
+    
+    - name: Run tests
+      working-directory: build
+      run: |
+        # Run CTest with output on failure
+        ctest -C ${{env.BUILD_TYPE}} --output-on-failure || true
+        
+        # Run Credential Manager property tests specifically
+        if [ -f "tests/credential_manager/test_credential_properties.exe" ]; then
+          echo "=== Running Credential Manager Property Tests ==="
+          ./tests/credential_manager/test_credential_properties.exe || true
+        fi
+        
+        # Run Credential Manager unit tests
+        if [ -f "tests/credential_manager/test_credential_unit.exe" ]; then
+          echo "=== Running Credential Manager Unit Tests ==="
+          ./tests/credential_manager/test_credential_unit.exe || true
+        fi
+        
+        # Run Platform Abstraction tests
+        if [ -f "tests/keychain/test_platform_abstraction.exe" ]; then
+          echo "=== Running Platform Abstraction Tests ==="
+          ./tests/keychain/test_platform_abstraction.exe || true
+        fi
+    
+    - name: Create self-contained package
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        PKG_DIR="multi-remmina-win64-${VERSION}"
+        
+        mkdir -p "${PKG_DIR}"
+        
+        # Copy main executable
+        cp build/src/multi-remmina.exe "${PKG_DIR}/" || cp build/src/remmina.exe "${PKG_DIR}/multi-remmina.exe"
+        
+        # Copy plugins
+        mkdir -p "${PKG_DIR}/plugins"
+        find build/plugins -name "*.dll" -exec cp {} "${PKG_DIR}/plugins/" \;
+        
+        # Copy resources
+        mkdir -p "${PKG_DIR}/share/multi-remmina"
+        cp -r data/ui "${PKG_DIR}/share/multi-remmina/" 2>/dev/null || true
+        cp -r data/theme "${PKG_DIR}/share/multi-remmina/" 2>/dev/null || true
+        
+        # Collect DLL dependencies using ldd
+        echo "Collecting DLL dependencies..."
+        for exe in "${PKG_DIR}"/*.exe "${PKG_DIR}"/plugins/*.dll; do
+          if [ -f "$exe" ]; then
+            ldd "$exe" 2>/dev/null | grep -i "/ucrt64" | awk '{print $3}' | while read dll; do
+              if [ -f "$dll" ] && [ ! -f "${PKG_DIR}/$(basename $dll)" ]; then
+                cp "$dll" "${PKG_DIR}/"
+              fi
+            done
+          fi
+        done
+        
+        # Copy GTK3 runtime files
+        cp -r /ucrt64/share/glib-2.0 "${PKG_DIR}/share/" 2>/dev/null || true
+        cp -r /ucrt64/share/icons "${PKG_DIR}/share/" 2>/dev/null || true
+        
+        mkdir -p "${PKG_DIR}/lib/gdk-pixbuf-2.0"
+        cp -r /ucrt64/lib/gdk-pixbuf-2.0/* "${PKG_DIR}/lib/gdk-pixbuf-2.0/" 2>/dev/null || true
+        
+        mkdir -p "${PKG_DIR}/etc/gtk-3.0"
+        echo "[Settings]" > "${PKG_DIR}/etc/gtk-3.0/settings.ini"
+        echo "gtk-theme-name=Adwaita" >> "${PKG_DIR}/etc/gtk-3.0/settings.ini"
+        
+        # Create ZIP archive
+        7z a -tzip "multi-remmina-win64-${VERSION}.zip" "${PKG_DIR}"
+        
+        echo "Windows package created:"
+        ls -lh multi-remmina-win64-*.zip
+    
+    - name: Upload Windows artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: multi-remmina-windows-x64
+        path: multi-remmina-win64-*.zip
+        retention-days: 30
+
   # Code quality checks
   code-quality:
     name: Code Quality Checks
@@ -573,14 +737,15 @@ jobs:
   # Create automatic stable release on every master push
   create-release:
     name: Create Release
-    needs: [build-linux, build-macos]
+    needs: [build-linux, build-macos, build-windows]
     runs-on: ubuntu-latest
-    # Only run if both builds succeeded
+    # Only run if all builds succeeded
     if: |
       github.event_name == 'push' && 
       github.ref == 'refs/heads/master' &&
       needs.build-linux.result == 'success' &&
-      needs.build-macos.result == 'success'
+      needs.build-macos.result == 'success' &&
+      needs.build-windows.result == 'success'
     
     steps:
     - name: Checkout code
@@ -628,12 +793,21 @@ jobs:
         path: ./artifacts/macos
       continue-on-error: true
     
+    - name: Download Windows artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: multi-remmina-windows-x64
+        path: ./artifacts/windows
+      continue-on-error: true
+    
     - name: List downloaded artifacts
       run: |
         echo "Linux artifacts:"
         ls -lah ./artifacts/linux/ || echo "No Linux artifacts found"
         echo "macOS artifacts:"
         ls -lah ./artifacts/macos/ || echo "No macOS artifacts found"
+        echo "Windows artifacts:"
+        ls -lah ./artifacts/windows/ || echo "No Windows artifacts found"
     
     - name: Generate release notes
       id: release_notes
@@ -742,5 +916,6 @@ jobs:
         files: |
           artifacts/linux/*
           artifacts/macos/*
+          artifacts/windows/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
