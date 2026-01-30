@@ -94,9 +94,11 @@ static void remmina_plugin_glibsecret_unlock_secret_service(RemminaSecretPlugin*
 
 #if defined(_WIN32)
 	/* No unlock needed for Windows Credential Manager */
+	(void)plugin;
 	return;
 #elif defined(__APPLE__)
 	/* No unlock needed for macOS Keychain */
+	(void)plugin;
 	return;
 #else
 #ifdef LIBSECRET_VERSION_0_18

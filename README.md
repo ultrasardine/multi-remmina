@@ -2,9 +2,9 @@
 
 [![Build Status](https://github.com/ultrasardine/multi-remmina/actions/workflows/build.yml/badge.svg)](https://github.com/ultrasardine/multi-remmina/actions)
 [![License: GPL v2+](https://img.shields.io/badge/License-GPL%20v2+-blue.svg)](COPYING)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20FreeBSD-lightgrey.svg)](https://github.com/ultrasardine/multi-remmina)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows%20%7C%20FreeBSD-lightgrey.svg)](https://github.com/ultrasardine/multi-remmina)
 
-**Multi-Remmina** is a multiplatform remote desktop client that extends the popular Remmina project to macOS and FreeBSD while maintaining full Linux compatibility. Connect to remote desktops using RDP, VNC, SPICE, X2Go, SSH, and more—all from a unified GTK-based interface.
+**Multi-Remmina** is a multiplatform remote desktop client that extends the popular Remmina project to macOS, Windows, and FreeBSD while maintaining full Linux compatibility. Connect to remote desktops using RDP, VNC, SPICE, X2Go, SSH, and more—all from a unified GTK-based interface.
 
 ---
 
@@ -17,10 +17,12 @@
 - [Installation](#installation)
   - [Linux](#linux)
   - [macOS](#macos)
+  - [Windows](#windows)
   - [FreeBSD](#freebsd)
 - [Building from Source](#building-from-source)
   - [Linux Build](#linux-build)
   - [macOS Build](#macos-build)
+  - [Windows Build](#windows-build)
   - [FreeBSD Build](#freebsd-build)
 - [Architecture](#architecture)
   - [Core Components](#core-components)
@@ -58,6 +60,7 @@
 - **Credential Management**: Secure password storage using platform-native keychains
   - Linux: GNOME Keyring, KWallet
   - macOS: Keychain Services
+  - Windows: Credential Manager
   - FreeBSD: Secret Service API
 - **SFTP/FTP Client**: Built-in file transfer capabilities
 - **Terminal Emulator**: Integrated SSH terminal with VTE
@@ -96,6 +99,14 @@
 - **Architectures**: Intel (x86_64) and Apple Silicon (arm64)
 - **Distribution**: Application bundle (.app)
 - **Integration**: Native Keychain, Bonjour service discovery
+
+### Windows
+- **Versions**: Windows 10 and later
+- **Architecture**: x86_64
+- **Distribution**: NSIS installer (.exe)
+- **Integration**: Credential Manager, DNS-SD service discovery
+- **Build Environment**: MSYS2/MinGW
+- **Plugins**: RDP and VNC only (other protocols not available on Windows)
 
 ### FreeBSD
 - **Versions**: FreeBSD 12.x and later
@@ -250,6 +261,45 @@ open Multi-Remmina.app
 
 # Show all options
 ./scripts/macos-build.sh --help
+```
+
+### Windows Build
+
+```bash
+# Install MSYS2 from https://www.msys2.org/
+# Open MSYS2 MinGW 64-bit terminal
+
+# Clone repository
+git clone https://github.com/ultrasardine/multi-remmina.git
+cd multi-remmina
+
+# Build using automated script (installs dependencies automatically)
+./scripts/windows-build.sh
+
+# Create self-contained package
+./scripts/windows-bundle.sh build multi-remmina-win64
+
+# Create installer (requires NSIS)
+makensis scripts/windows-installer.nsi
+
+# Install and run
+# Run multi-remmina-setup.exe to install
+```
+
+#### Windows Build Options
+
+```bash
+# Debug build
+./scripts/windows-build.sh -t Debug
+
+# Custom build directory
+./scripts/windows-build.sh -d build-custom
+
+# Skip dependency installation
+./scripts/windows-build.sh --skip-deps
+
+# Show all options
+./scripts/windows-build.sh --help
 ```
 
 ### FreeBSD Build

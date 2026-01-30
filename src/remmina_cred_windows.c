@@ -72,19 +72,6 @@ static wchar_t* utf8_to_wide(const gchar *utf8_str)
 }
 
 /**
- * Convert wide character string (UTF-16) to UTF-8 string.
- * Returns newly allocated UTF-8 string that must be freed with g_free.
- */
-static gchar* wide_to_utf8(const wchar_t *wide_str)
-{
-	if (!wide_str)
-		return NULL;
-	
-	return g_utf16_to_utf8((const gunichar2*)wide_str, -1, NULL, NULL, NULL);
-}
-
-
-/**
  * remmina_cred_windows_store_password:
  * @target_name: Target identifier (e.g., "MultiRemmina:profile_path")
  * @username: Username for the credential
@@ -248,7 +235,6 @@ gboolean remmina_cred_windows_delete_password(const gchar *target_name,
 {
 	wchar_t *wide_target = NULL;
 	DWORD win_error;
-	gboolean result = FALSE;
 
 	if (!target_name) {
 		if (error) {

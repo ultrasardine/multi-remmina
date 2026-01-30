@@ -43,6 +43,29 @@
 #include <netinet/tcp.h>
 #endif
 
+/* Windows compatibility for pipe and fcntl */
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#define pipe(fds) _pipe(fds, 4096, _O_BINARY)
+/* Windows doesn't have fcntl for non-blocking, use ioctlsocket instead */
+#include <winsock2.h>
+#define F_GETFL 0
+#define F_SETFL 1
+#define O_NONBLOCK 1
+/* On Windows, we'll use a different approach for non-blocking pipes */
+static inline int fcntl(int fd, int cmd, ...) {
+    /* For Windows pipes, non-blocking mode is not directly supported */
+    /* We'll just return success and handle it differently */
+    (void)fd;
+    (void)cmd;
+    return 0;
+}
+#else
+#include <unistd.h>
+#include <fcntl.h>
+#endif
+
 #define REMMINA_PLUGIN_VNC_FEATURE_PREF_QUALITY            1
 #define REMMINA_PLUGIN_VNC_FEATURE_VIEWONLY                2
 #define REMMINA_PLUGIN_VNC_FEATURE_PREF_DISABLESERVERINPUT 3
@@ -1184,7 +1207,9 @@ static gboolean remmina_plugin_vnc_main(RemminaProtocolWidget *gp)
 	rfbClient *cl = NULL;
 	gchar *host;
 	gchar *s = NULL;
+#ifdef HAVE_NETINET_TCP_H
 	gint optval;
+#endif
 	
 	remminafile = remmina_plugin_service->protocol_plugin_get_file(gp);
 	gpdata->running = TRUE;
