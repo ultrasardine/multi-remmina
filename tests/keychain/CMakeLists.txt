@@ -1,9 +1,6 @@
 # Keychain property-based tests (macOS) and Credential Manager tests (Windows)
 
-# Find required packages
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GLIB REQUIRED glib-2.0)
-pkg_check_modules(GIO REQUIRED gio-2.0)
+# Use GLib from parent scope (already found in main CMakeLists.txt)
 
 if(APPLE)
 	# Property-based tests
@@ -14,13 +11,13 @@ if(APPLE)
 
 	target_include_directories(test_keychain_properties PRIVATE
 		${CMAKE_SOURCE_DIR}/src
-		${GLIB_INCLUDE_DIRS}
+		${GLib_INCLUDE_DIRS}
 		${GIO_INCLUDE_DIRS}
 	)
 
 	target_link_libraries(test_keychain_properties
-		${GLIB_LIBRARIES}
-		${GIO_LIBRARIES}
+		${GLib_LIBRARY}
+		${GIO_LIBRARY}
 		"-framework Security"
 		"-framework CoreFoundation"
 	)
@@ -33,13 +30,13 @@ if(APPLE)
 
 	target_include_directories(test_keychain_unit PRIVATE
 		${CMAKE_SOURCE_DIR}/src
-		${GLIB_INCLUDE_DIRS}
+		${GLib_INCLUDE_DIRS}
 		${GIO_INCLUDE_DIRS}
 	)
 
 	target_link_libraries(test_keychain_unit
-		${GLIB_LIBRARIES}
-		${GIO_LIBRARIES}
+		${GLib_LIBRARY}
+		${GIO_LIBRARY}
 		"-framework Security"
 		"-framework CoreFoundation"
 	)
@@ -52,13 +49,13 @@ if(APPLE)
 
 	target_include_directories(test_platform_abstraction PRIVATE
 		${CMAKE_SOURCE_DIR}/src
-		${GLIB_INCLUDE_DIRS}
+		${GLib_INCLUDE_DIRS}
 		${GIO_INCLUDE_DIRS}
 	)
 
 	target_link_libraries(test_platform_abstraction
-		${GLIB_LIBRARIES}
-		${GIO_LIBRARIES}
+		${GLib_LIBRARY}
+		${GIO_LIBRARY}
 		"-framework Security"
 		"-framework CoreFoundation"
 	)
@@ -76,13 +73,13 @@ elseif(WIN32)
 
 	target_include_directories(test_platform_abstraction PRIVATE
 		${CMAKE_SOURCE_DIR}/src
-		${GLIB_INCLUDE_DIRS}
+		${GLib_INCLUDE_DIRS}
 		${GIO_INCLUDE_DIRS}
 	)
 
 	target_link_libraries(test_platform_abstraction
-		${GLIB_LIBRARIES}
-		${GIO_LIBRARIES}
+		${GLib_LIBRARY}
+		${GIO_LIBRARY}
 		advapi32
 	)
 

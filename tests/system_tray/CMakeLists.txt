@@ -3,9 +3,7 @@
 
 cmake_minimum_required(VERSION 3.10)
 
-# Find required packages
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+# Use GTK from parent scope (already found in main CMakeLists.txt)
 
 # Unit tests for system tray integration
 add_executable(test_system_tray_unit
@@ -19,10 +17,6 @@ target_include_directories(test_system_tray_unit PRIVATE
 
 target_link_libraries(test_system_tray_unit
 	${GTK3_LIBRARIES}
-)
-
-target_compile_options(test_system_tray_unit PRIVATE
-	${GTK3_CFLAGS_OTHER}
 )
 
 # Add test to CTest

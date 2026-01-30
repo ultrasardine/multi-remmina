@@ -1,9 +1,7 @@
 # Service Discovery Tests for macOS and Windows
 
 if(APPLE OR WIN32)
-	# Find required packages
-	find_package(PkgConfig REQUIRED)
-	pkg_check_modules(GLIB REQUIRED glib-2.0)
+	# Use GLib from parent scope (already found in main CMakeLists.txt)
 
 	if(APPLE)
 		# Property-based tests for macOS
@@ -13,12 +11,12 @@ if(APPLE OR WIN32)
 		)
 
 		target_include_directories(test_service_discovery_properties PRIVATE
-			${GLIB_INCLUDE_DIRS}
+			${GLib_INCLUDE_DIRS}
 			${CMAKE_SOURCE_DIR}/src
 		)
 
 		target_link_libraries(test_service_discovery_properties
-			${GLIB_LIBRARIES}
+			${GLib_LIBRARY}
 		)
 
 		# Unit tests for macOS
@@ -28,12 +26,12 @@ if(APPLE OR WIN32)
 		)
 
 		target_include_directories(test_service_discovery_unit PRIVATE
-			${GLIB_INCLUDE_DIRS}
+			${GLib_INCLUDE_DIRS}
 			${CMAKE_SOURCE_DIR}/src
 		)
 
 		target_link_libraries(test_service_discovery_unit
-			${GLIB_LIBRARIES}
+			${GLib_LIBRARY}
 		)
 
 		# Avahi wrapper integration tests for macOS
@@ -44,14 +42,14 @@ if(APPLE OR WIN32)
 		)
 
 		target_include_directories(test_avahi_wrapper PRIVATE
-			${GLIB_INCLUDE_DIRS}
+			${GLib_INCLUDE_DIRS}
 			${CMAKE_SOURCE_DIR}/src
 			${CMAKE_SOURCE_DIR}/src/include
 			${CMAKE_BINARY_DIR}/generated
 		)
 
 		target_link_libraries(test_avahi_wrapper
-			${GLIB_LIBRARIES}
+			${GLib_LIBRARY}
 		)
 
 		message(STATUS "Service discovery tests configured for macOS")
@@ -63,12 +61,12 @@ if(APPLE OR WIN32)
 		)
 
 		target_include_directories(test_service_discovery_properties PRIVATE
-			${GLIB_INCLUDE_DIRS}
+			${GLib_INCLUDE_DIRS}
 			${CMAKE_SOURCE_DIR}/src
 		)
 
 		target_link_libraries(test_service_discovery_properties
-			${GLIB_LIBRARIES}
+			${GLib_LIBRARY}
 			dnsapi
 			ws2_32
 		)
@@ -80,12 +78,12 @@ if(APPLE OR WIN32)
 		)
 
 		target_include_directories(test_service_discovery_unit PRIVATE
-			${GLIB_INCLUDE_DIRS}
+			${GLib_INCLUDE_DIRS}
 			${CMAKE_SOURCE_DIR}/src
 		)
 
 		target_link_libraries(test_service_discovery_unit
-			${GLIB_LIBRARIES}
+			${GLib_LIBRARY}
 			dnsapi
 			ws2_32
 		)
@@ -98,14 +96,14 @@ if(APPLE OR WIN32)
 		)
 
 		target_include_directories(test_avahi_wrapper PRIVATE
-			${GLIB_INCLUDE_DIRS}
+			${GLib_INCLUDE_DIRS}
 			${CMAKE_SOURCE_DIR}/src
 			${CMAKE_SOURCE_DIR}/src/include
 			${CMAKE_BINARY_DIR}/generated
 		)
 
 		target_link_libraries(test_avahi_wrapper
-			${GLIB_LIBRARIES}
+			${GLib_LIBRARY}
 			dnsapi
 			ws2_32
 		)

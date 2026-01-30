@@ -1,10 +1,6 @@
 # Application launch unit tests
 
-# Find required packages
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
-pkg_check_modules(GLIB REQUIRED glib-2.0)
-pkg_check_modules(GIO REQUIRED gio-2.0)
+# Use GLib/GTK from parent scope (already found in main CMakeLists.txt)
 
 # Unit tests for application launch
 add_executable(test_application_launch_unit
@@ -14,14 +10,14 @@ add_executable(test_application_launch_unit
 target_include_directories(test_application_launch_unit PRIVATE
 	${CMAKE_SOURCE_DIR}/src
 	${GTK3_INCLUDE_DIRS}
-	${GLIB_INCLUDE_DIRS}
+	${GLib_INCLUDE_DIRS}
 	${GIO_INCLUDE_DIRS}
 )
 
 target_link_libraries(test_application_launch_unit
 	${GTK3_LIBRARIES}
-	${GLIB_LIBRARIES}
-	${GIO_LIBRARIES}
+	${GLib_LIBRARY}
+	${GIO_LIBRARY}
 )
 
 # Add platform-specific frameworks on macOS

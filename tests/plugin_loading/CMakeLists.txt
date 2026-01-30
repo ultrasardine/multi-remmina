@@ -1,9 +1,7 @@
 # Plugin Loading Tests
 
-# Find required packages
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GLIB REQUIRED glib-2.0)
-pkg_check_modules(GMODULE REQUIRED gmodule-2.0)
+# Use GLib from parent scope (already found in main CMakeLists.txt)
+# GLib_INCLUDE_DIRS and GLib_LIBRARIES should be available
 
 # Property-based test for plugin protocol registration
 add_executable(test_plugin_properties
@@ -11,13 +9,13 @@ add_executable(test_plugin_properties
 )
 
 target_include_directories(test_plugin_properties PRIVATE
-	${GLIB_INCLUDE_DIRS}
-	${GMODULE_INCLUDE_DIRS}
+	${GLib_INCLUDE_DIRS}
+	${GMODULE_INCLUDE_DIR}
 )
 
 target_link_libraries(test_plugin_properties
-	${GLIB_LIBRARIES}
-	${GMODULE_LIBRARIES}
+	${GLib_LIBRARY}
+	${GMODULE_LIBRARY}
 )
 
 # Unit tests for plugin loading edge cases
@@ -26,13 +24,13 @@ add_executable(test_plugin_unit
 )
 
 target_include_directories(test_plugin_unit PRIVATE
-	${GLIB_INCLUDE_DIRS}
-	${GMODULE_INCLUDE_DIRS}
+	${GLib_INCLUDE_DIRS}
+	${GMODULE_INCLUDE_DIR}
 )
 
 target_link_libraries(test_plugin_unit
-	${GLIB_LIBRARIES}
-	${GMODULE_LIBRARIES}
+	${GLib_LIBRARY}
+	${GMODULE_LIBRARY}
 )
 
 # Add tests to CTest

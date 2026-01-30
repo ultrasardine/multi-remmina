@@ -1,11 +1,6 @@
 # Profile Management Tests
 
-# Find required packages
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GLIB REQUIRED glib-2.0)
-pkg_check_modules(GIO REQUIRED gio-2.0)
-pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
-pkg_check_modules(JSONGLIB REQUIRED json-glib-1.0)
+# Use GLib/GTK from parent scope (already found in main CMakeLists.txt)
 
 # Unit tests for profile creation
 add_executable(test_profile_unit
@@ -26,17 +21,17 @@ target_include_directories(test_profile_unit PRIVATE
 	${CMAKE_SOURCE_DIR}/src/include
 	${CMAKE_BINARY_DIR}
 	${CMAKE_BINARY_DIR}/generated
-	${GLIB_INCLUDE_DIRS}
+	${GLib_INCLUDE_DIRS}
 	${GIO_INCLUDE_DIRS}
 	${GTK3_INCLUDE_DIRS}
 	${JSONGLIB_INCLUDE_DIRS}
 )
 
 target_link_libraries(test_profile_unit
-	${GLIB_LIBRARIES}
-	${GIO_LIBRARIES}
+	${GLib_LIBRARY}
+	${GIO_LIBRARY}
 	${GTK3_LIBRARIES}
-	${JSONGLIB_LIBRARIES}
+	${JSONGLIB_LIBRARY}
 	${sodium_LIBRARY_RELEASE}
 )
 
@@ -72,17 +67,17 @@ target_include_directories(test_profile_properties PRIVATE
 	${CMAKE_SOURCE_DIR}/src/include
 	${CMAKE_BINARY_DIR}
 	${CMAKE_BINARY_DIR}/generated
-	${GLIB_INCLUDE_DIRS}
+	${GLib_INCLUDE_DIRS}
 	${GIO_INCLUDE_DIRS}
 	${GTK3_INCLUDE_DIRS}
 	${JSONGLIB_INCLUDE_DIRS}
 )
 
 target_link_libraries(test_profile_properties
-	${GLIB_LIBRARIES}
-	${GIO_LIBRARIES}
+	${GLib_LIBRARY}
+	${GIO_LIBRARY}
 	${GTK3_LIBRARIES}
-	${JSONGLIB_LIBRARIES}
+	${JSONGLIB_LIBRARY}
 	${sodium_LIBRARY_RELEASE}
 )
 
@@ -127,17 +122,17 @@ if(WIN32)
 		${CMAKE_SOURCE_DIR}/src/include
 		${CMAKE_BINARY_DIR}
 		${CMAKE_BINARY_DIR}/generated
-		${GLIB_INCLUDE_DIRS}
+		${GLib_INCLUDE_DIRS}
 		${GIO_INCLUDE_DIRS}
 		${GTK3_INCLUDE_DIRS}
 		${JSONGLIB_INCLUDE_DIRS}
 	)
 	
 	target_link_libraries(test_windows_profile_creation
-		${GLIB_LIBRARIES}
-		${GIO_LIBRARIES}
+		${GLib_LIBRARY}
+		${GIO_LIBRARY}
 		${GTK3_LIBRARIES}
-		${JSONGLIB_LIBRARIES}
+		${JSONGLIB_LIBRARY}
 		${sodium_LIBRARY_RELEASE}
 		Advapi32
 		Shell32
@@ -171,17 +166,17 @@ if(WIN32)
 		${CMAKE_SOURCE_DIR}/src/include
 		${CMAKE_BINARY_DIR}
 		${CMAKE_BINARY_DIR}/generated
-		${GLIB_INCLUDE_DIRS}
+		${GLib_INCLUDE_DIRS}
 		${GIO_INCLUDE_DIRS}
 		${GTK3_INCLUDE_DIRS}
 		${JSONGLIB_INCLUDE_DIRS}
 	)
 	
 	target_link_libraries(test_windows_profile_persistence
-		${GLIB_LIBRARIES}
-		${GIO_LIBRARIES}
+		${GLib_LIBRARY}
+		${GIO_LIBRARY}
 		${GTK3_LIBRARIES}
-		${JSONGLIB_LIBRARIES}
+		${JSONGLIB_LIBRARY}
 		${sodium_LIBRARY_RELEASE}
 		Advapi32
 		Shell32
@@ -215,17 +210,17 @@ if(WIN32)
 		${CMAKE_SOURCE_DIR}/src/include
 		${CMAKE_BINARY_DIR}
 		${CMAKE_BINARY_DIR}/generated
-		${GLIB_INCLUDE_DIRS}
+		${GLib_INCLUDE_DIRS}
 		${GIO_INCLUDE_DIRS}
 		${GTK3_INCLUDE_DIRS}
 		${JSONGLIB_INCLUDE_DIRS}
 	)
 	
 	target_link_libraries(test_windows_profile_properties
-		${GLIB_LIBRARIES}
-		${GIO_LIBRARIES}
+		${GLib_LIBRARY}
+		${GIO_LIBRARY}
 		${GTK3_LIBRARIES}
-		${JSONGLIB_LIBRARIES}
+		${JSONGLIB_LIBRARY}
 		${sodium_LIBRARY_RELEASE}
 		Advapi32
 		Shell32
