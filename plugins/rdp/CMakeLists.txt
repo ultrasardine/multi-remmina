@@ -36,7 +36,10 @@
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 
-find_suggested_package(Cups)
+# CUPS is not available on Windows - skip printing support
+if(NOT WIN32)
+    find_suggested_package(Cups)
+endif()
 
 set(REMMINA_PLUGIN_RDP_SRCS
     rdp_plugin.c
